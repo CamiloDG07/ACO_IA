@@ -11,7 +11,9 @@ __pycache__/
 /src/aco_tsp
 /src/aco_denso
 
-# LaTeX intermedio
+# LaTeX intermedio (el PDF final se regenera con latexmk; no se versiona,
+# igual que en el taller de referencia)
+informe/*.pdf
 informe/*.aux
 informe/*.log
 informe/*.out

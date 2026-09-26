@@ -1,0 +1,214 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[spanish,es-nodecimaldot,es-tabla]{babel}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{verbatim}
+\usepackage{mathptmx}
+\usepackage{setspace}
+\usepackage{xurl}
+\usepackage{amsmath}
+
+\geometry{top=2.5cm, bottom=2.5cm, left=3cm, right=3cm}
+\hypersetup{colorlinks=true, linkcolor=black, urlcolor=blue, citecolor=black}
+\graphicspath{{../resultados/figuras/}{figuras_codigo/}}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small Colonia de hormigas aplicada al TSP}
+\fancyhead[R]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\setlength{\headheight}{15pt}
+
+\titleformat{\section}{\normalfont\Large\bfseries}{\thesection}{1em}{}
+\titleformat{\subsection}{\normalfont\large\bfseries}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}{\normalfont\normalsize\bfseries}{\thesubsubsection}{1em}{}
+
+\begin{document}
+
+\begin{titlepage}
+\thispagestyle{empty}
+\centering
+
+\vspace*{0.5cm}
+\includegraphics[width=0.30\textwidth]{sergio_logo.png}\\[0.4cm]
+
+{\fontsize{13}{15}\selectfont\textbf{UNIVERSIDAD SERGIO ARBOLEDA}}\\[2.5cm]
+
+{\fontsize{14}{17}\selectfont\textbf{COLONIA DE HORMIGAS APLICADA AL PROBLEMA\\[0.2cm]
+DEL VIAJANTE (TSP): INSTANCIAS DE 20, 2 000 Y 200 000 CIUDADES}}\\[3.5cm]
+
+{\fontsize{12}{14}\selectfont\textbf{Inteligencia Artificial}}\\[1.8cm]
+
+{\fontsize{12}{14}\selectfont Mario Jiménez}\\[0.3cm]
+{\fontsize{12}{14}\selectfont Juan David Andrade}\\[0.3cm]
+{\fontsize{12}{14}\selectfont Camilo Andrés Díaz García}\\[0.3cm]
+
+\vfill
+
+\begin{center}
+    \textit{Universidad Sergio Arboleda}\\
+    \textit{Facultad de Sistemas e Ingeniería}\\
+    \textit{Bogotá D.C., 2026}
+\end{center}
+
+\end{titlepage}
+
+\newpage
+\tableofcontents
+\newpage
+
+\onehalfspacing
+
+% ====================================================================
+\section{Introducción}
+\emph{Pendiente: se completa en la Fase 5, con el contexto del taller, el
+equipo y el objetivo de ahorrar tiempo y memoria frente al espacio de
+búsqueda factorial del TSP.}
+
+% ====================================================================
+\section{Marco teórico}
+\emph{Pendiente: estigmergia, regla de transición, evaporación, depósito,
+exploración y explotación, con las fórmulas de las diapositivas 14--19 (ver
+`docs/bitacora.md` y el código fuente para las expresiones ya validadas).}
+
+% ====================================================================
+\section{Descripción del problema y espacio factorial}
+\emph{Pendiente: TSP simétrico con origen fijo, $(n-1)!/2$ recorridos
+posibles, ejemplos numéricos para $n=20$, $2\,000$ y $200\,000$ vía
+\texttt{lgamma} (Fase 4).}
+
+% ====================================================================
+\section{Diseño de la solución}
+
+\subsection{Elección de lenguaje}
+El proyecto se implementa en C++20 con OpenMP; no se implementó nada en
+Python, C ni Rust, y no se hicieron comparaciones de lenguaje. La
+justificación es breve y teórica, no empírica:
+
+Python se descarta por tres razones estructurales: la sobrecarga del bucle
+de evaluación de bytecode del intérprete de CPython en cada operación
+aritmética del paso de una hormiga; el acceso irregular a memoria, que
+Python (incluso con \texttt{numpy} en presencia de lógica de control como la
+ruleta) no permite controlar con la precisión de un arreglo contiguo de
+$n \cdot K$ elementos; y la falta de paralelismo real dentro de un proceso,
+por el \emph{Global Interpreter Lock} (GIL) de CPython, que impide que dos
+hilos ejecuten bytecode de Python al mismo tiempo, justo cuando la parte
+costosa del algoritmo (la construcción de tours por hormigas independientes)
+es la que se querría paralelizar con hilos.
+
+C++ ofrece en cambio control de memoria (arreglos contiguos, sin recolector
+de basura), OpenMP como mecanismo directo de paralelismo por hilos, y un
+código base ya validado (\texttt{aco\_tsp.cpp}, corrido en Linux con g++ 13
+antes de este repositorio). C y Rust no se descartan por incapacidad
+técnica del enunciado, sino porque no aportaban nada sobre partir de ese
+código ya validado en C++. Ver \texttt{docs/decisiones\_diseno.md} para la
+tabla completa de la decisión.
+
+\subsection{Número de agentes}
+\label{sec:numero-agentes}
+Se adopta $m = \min(n, 20\,000)$: $n=20$ con $m=20$; $n=2\,000$ con
+$m=2\,000$; $n=200\,000$ con $m=20\,000$ (las $200\,000$ ciudades se
+ejecutan siempre completas).
+
+\paragraph{Convención de la literatura.} Dorigo y Stützle (2004, \emph{Ant
+Colony Optimization}, MIT Press) documentan, en la tabla de parámetros
+recomendados para AS y sus variantes sin búsqueda local (p.~71, Box~3.1),
+que el número de hormigas se fija en $m=n$; en las pp.~103--104 explican que
+esto hace el requisito de memoria $O(n^2)$ (${\approx}32n^2$ bytes); y en la
+p.~112 atribuyen la convención $m \propto n$ a los artículos originales de
+Dorigo, Maniezzo y Colorni (1991, 1996). No se cita una página de esos
+artículos originales por no haberlos verificado directamente.
+
+\paragraph{Costo y extrapolación.} Con lista de candidatos de tamaño $K$,
+una iteración cuesta $O(m n K)$; con $m=n$ pasa a $O(n^2 K)$. El tiempo
+medido en esta máquina para una iteración en $n=200\,000$, $K=8$
+(\texttt{resultados/costo\_m\_n200000.csv}) fue de 1,099~s ($m=200$),
+13,056~s ($m=2\,000$) y 144,850~s ($m=20\,000$). El ajuste lineal por
+mínimos cuadrados da $t(m) \approx 0{,}007285\,m - 0{,}909$ segundos, con
+$R^2 = 0{,}999947$. \textbf{Como estimación por extrapolación lineal, no
+como corrida real}, una iteración con $m=n=200\,000$ tomaría
+${\approx}1\,456$ s (${\approx}24{,}3$ min), cifra consistente con la
+estimación independiente de la Fase~1 (${\approx}24{,}5$ min).
+
+\paragraph{Por qué el tope de 20 000.} Es una decisión de presupuesto de
+cómputo de esta máquina (Fase~0), no una propiedad del algoritmo: diez
+iteraciones con $m=n=200\,000$ tomarían más de 4 horas (extrapolado),
+mientras que con $m=20\,000$ toman del orden de 25 minutos por semilla,
+medido directamente. Además, la feromona se actualiza una sola vez por
+iteración sin importar cuántas hormigas corrieron, así que agregar hormigas
+no agrega actualizaciones de feromona, solo muestras adicionales antes de
+esa única actualización.
+
+\paragraph{Respaldo empírico.} La calidad contra $m$ en $n=2\,000$ (50
+iteraciones fijas, 5 semillas, \texttt{resultados/barrido\_m.csv}) muestra
+rendimientos decrecientes marcados: de $m=10$ a $m=20\,000$ (2\,000 veces
+más hormigas) la longitud media mejora solo 2,4\,\% (39,84 a 38,89), con un
+costo de cómputo casi 1\,080 veces mayor. La comparación a igual presupuesto
+de cómputo en $n=200\,000$ ($m=2\,048$ contra $m=20\,000$, mismo tiempo de
+reloj) queda \textbf{pendiente} de ejecutarse (corrida larga, con
+confirmación previa del estudiante); esta sección se actualiza cuando esa
+corrida cierre. Con los datos disponibles hasta ahora, la saturación de
+calidad con el número de iteraciones fijo sugiere que el tope de 20\,000 no
+responde a una necesidad de calidad, sino al presupuesto de tiempo — pero
+esa conclusión se confirma o se corrige con la comparación pendiente.
+
+\paragraph{Aclaración.} 20\,000 es una decisión de ingeniería para esta
+máquina y este equipo, no un óptimo teórico. Dorigo y Stützle (2004, p.~217,
+sección 5.7.6) señalan que "el mejor valor de $m$ es función del algoritmo
+ACO particular y de la clase de problemas atacados, y la mayoría de las
+veces debe fijarse experimentalmente".
+
+\subsection{Estructuras de datos y estrategias de ahorro}
+\emph{Pendiente: lista de $K$ vecinas por ciudad, rejilla espacial,
+renumeración por celda, buffers por hilo sin almacenar el tour, pesos
+precalculados por iteración (ver \texttt{docs/estrategias\_ahorro.md}).}
+
+% ====================================================================
+\section{Implementación}
+\emph{Pendiente: portabilidad a Windows, \texttt{--input} TSPLIB,
+\texttt{--tiempo\_max}, versión densa de referencia, pruebas automáticas
+(Fase 1, ver \texttt{docs/bitacora.md}).}
+
+% ====================================================================
+\section{Metodología experimental}
+\emph{Pendiente: barrido de parámetros con 5 semillas, criterio de parada,
+estudios de escalamiento (Fase 2).}
+
+% ====================================================================
+\section{Resultados por instancia}
+\emph{Pendiente: tablas de longitud, tiempo y memoria por instancia (20,
+2\,000, 200\,000), con media, desviación, mínimo y máximo (Fase 2 y
+\texttt{docs/resultados.md}).}
+
+% ====================================================================
+\section{Análisis de tiempo y memoria}
+\emph{Pendiente: complejidad y comprobación empírica (Fase 4).}
+
+% ====================================================================
+\section{Discusión}
+\emph{Pendiente.}
+
+% ====================================================================
+\section{Limitaciones}
+\emph{Pendiente: ACO no garantiza el óptimo; con $n=200\,000$ y pocas
+iteraciones el resultado queda cerca del vecino más cercano; la lista de
+candidatos restringe el espacio de búsqueda; la instancia aleatoria uniforme
+no es una instancia TSPLIB real.}
+
+% ====================================================================
+\section{Conclusiones}
+\emph{Pendiente.}
+
+% ====================================================================
+\section{Referencias}
+\emph{Pendiente: Hurbans (2020, cap. 6); Dorigo, Maniezzo y Colorni (1996);
+Dorigo y Stützle (2004).}
+
+\end{document}

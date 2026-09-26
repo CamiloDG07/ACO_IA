@@ -14,8 +14,8 @@
 // ni segunda feromona (no hacen falta para el proposito de comparacion de esta version).
 //
 // Compilar (Linux):    g++ -O3 -march=native -std=c++20 -fopenmp aco_denso.cpp -o aco_denso
-// Compilar (Windows, MinGW-w64):
-//   g++ -O3 -march=native -std=c++20 -fopenmp aco_denso.cpp -o aco_denso.exe -lpsapi
+// Compilar (Windows, MinGW-w64): -static evita depender de las DLL de MinGW en el PATH.
+//   g++ -O3 -march=native -std=c++20 -fopenmp -static aco_denso.cpp -o aco_denso.exe -lpsapi
 
 #include <algorithm>
 #include <atomic>

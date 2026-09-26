@@ -96,3 +96,69 @@ ACO_IA. Incluye los intentos que no funcionaron, no solo el resultado final.
     enunciado, por tener más hilos). **No se lanzó** esa corrida completa;
     queda pendiente de que el estudiante decida cuántas iteraciones caben
     en el tiempo disponible antes de ejecutarla (Fase 2).
+
+## 2026-09-26 — Fase 2: ajuste de plan (lenguaje, número de agentes, corridas largas)
+
+El estudiante dio un ajuste final para la Fase 2, que reemplaza cualquier
+indicación previa sobre lenguaje, número de hormigas y corridas largas:
+
+- **Lenguaje**: solo C++ con OpenMP. No se implementó nada en Python, C ni
+  Rust, y no se hicieron comparaciones de lenguaje. Justificación breve y
+  teórica en `docs/decisiones_diseno.md`: sobrecarga del intérprete de
+  Python, acceso irregular a memoria, y GIL (sin paralelismo real de hilos).
+- **Número de agentes**: `m = min(n, 20000)` en vez de `m` fijo. Antes de
+  citar la convención de la literatura ("m = n" para Ant System) se verificó
+  la fuente primaria: se descargó el libro completo *Ant Colony Optimization*
+  (Dorigo y Stützle, 2004, MIT Press) y se localizó el texto exacto con
+  número de página (p. 71, Box 3.1; pp. 103–104; p. 112; p. 217). No se citó
+  ninguna página de los artículos originales de 1991/1996 por no haberlos
+  verificado directamente (se cita solo lo verificado).
+- **Ejecutables recompilados estáticamente** (`-static`, además de `-O3
+  -march=native -std=c++20 -fopenmp -lpsapi`) para que corran sin depender
+  de que el PATH tenga las DLL de MinGW-w64 en cada proceso (necesario para
+  automatizar experimentos y para que el entregable corra en cualquier
+  Windows sin instalar el compilador). Confirmado: corren igual desde Git
+  Bash sin refrescar el PATH.
+- **`scripts/experimentos_fase2.py`**: automatiza el barrido de parámetros
+  (alpha, beta, rho, qfac, K, segunda feromona, 5 semillas cada uno, m=2000
+  fijo en n=2000), el barrido de m (10, 100, 1000, 2000, 20000 en n=2000, 5
+  semillas), el criterio de parada (iteraciones/tiempo/stall), la serie de
+  escalamiento (m=2048 fijo, n en {20,200,2000,20000,200000}, dispersa y
+  densa donde n≤5000) y el costo de m en n=200000 (m=200,2000,20000, una
+  iteración cada uno). Corrido en segundo plano, ~35 min reales, sin errores;
+  resultados en `resultados/*.csv`.
+- **Extrapolación de m=n en n=200000**: tiempo medido de una iteración con
+  K=8, alpha=1.5, beta=5, rho=0.1, qfac=3, semilla 1: 1,099 s (m=200), 13,056
+  s (m=2000), 144,850 s (m=20000). Ajuste lineal por mínimos cuadrados:
+  `t(m) ≈ 0,007285·m − 0,909` s, R²=0,999947 (prácticamente lineal, como
+  predice la teoría a n y K fijos). Extrapolación a m=n=200000 ≈ 1456 s ≈
+  24,3 min por iteración, coherente con la estimación independiente de la
+  Fase 1 (24,5 min) obtenida por otro método (tasa efectiva medida con
+  m=2048). Marcada explícitamente como estimación por extrapolación, no como
+  corrida real.
+- **Calidad contra m** (n=2000, K=10, alpha=1, beta=3, rho=0.1, qfac=1, 50
+  iteraciones fijas, 5 semillas): la longitud media mejora solo 2,4 % al
+  subir m de 10 a 20000 (39,84 → 38,89), mientras el tiempo de cómputo sube
+  ~1080 veces (0,058 s → 62,7 s). Rendimientos claramente decrecientes a
+  partir de m≈1000-2000, consistente con lo que Dorigo y Stützle (2004, pp.
+  96–97) reportan para MMAS con búsqueda local en instancias medianas.
+- Con estos datos (número de iteraciones fijo, no tiempo de reloj fijo), la
+  saturación de calidad sugiere que el tope m=20000 responde al presupuesto
+  de tiempo y no a una necesidad de calidad — pero esta conclusión queda
+  sujeta a confirmarse con la comparación a igual presupuesto de cómputo en
+  n=200000 (m=2048 vs m=20000, 3 semillas), que es una de las corridas
+  largas **todavía no lanzada**.
+- Documentación actualizada: `docs/decisiones_diseno.md` (lenguaje y número
+  de agentes, secciones (a)-(e) completas salvo la comparación a igual
+  presupuesto), `informe/informe.tex` (mismo contenido resumido en la
+  sección "Diseño de la solución", compila a PDF de 6 páginas sin errores),
+  `docs/guia_exposicion.md` (respuesta corta a "por qué esa cantidad de
+  hormigas").
+- **Pendiente, con confirmación del estudiante antes de lanzar** (corridas
+  largas, al final, cuando no esté usando el PC):
+  1. Corrida real n=200000, m=20000, 10 iteraciones, K=8/alpha1.5/beta5/
+     rho0.1/Q3, hasta 3 semillas si el tiempo alcanza. Estimado ~24,5
+     min/semilla ⇒ ~1 h 14 min con 3 semillas.
+  2. Comparación a igual presupuesto de cómputo en n=200000: m=2048 contra
+     m=20000, mismo tiempo de reloj (propuesto 15 min por corrida), 3
+     semillas. Estimado ~1 h 30 min.

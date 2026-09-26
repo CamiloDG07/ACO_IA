@@ -20,8 +20,8 @@
 //   dtau = Q/L_k si la hormiga k uso (i,j).  Aqui Q se normaliza como Q = qfac * L_nn / m.
 //
 // Compilar (Linux):    g++ -O3 -march=native -std=c++20 -fopenmp aco_tsp.cpp -o aco_tsp
-// Compilar (Windows, MinGW-w64):
-//   g++ -O3 -march=native -std=c++20 -fopenmp aco_tsp.cpp -o aco_tsp.exe -lpsapi
+// Compilar (Windows, MinGW-w64): -static evita depender de las DLL de MinGW en el PATH.
+//   g++ -O3 -march=native -std=c++20 -fopenmp -static aco_tsp.cpp -o aco_tsp.exe -lpsapi
 
 #include <algorithm>
 #include <atomic>
