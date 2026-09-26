@@ -19,7 +19,9 @@
 // Formulas (diapositivas 14-19):  eta=1/d ; p_ij = tau^a * eta^b / sum ; tau <- (1-rho) tau + sum dtau ;
 //   dtau = Q/L_k si la hormiga k uso (i,j).  Aqui Q se normaliza como Q = qfac * L_nn / m.
 //
-// Compilar:  g++ -O3 -march=native -std=c++20 -fopenmp aco_tsp.cpp -o aco_tsp
+// Compilar (Linux):    g++ -O3 -march=native -std=c++20 -fopenmp aco_tsp.cpp -o aco_tsp
+// Compilar (Windows, MinGW-w64):
+//   g++ -O3 -march=native -std=c++20 -fopenmp aco_tsp.cpp -o aco_tsp.exe -lpsapi
 
 #include <algorithm>
 #include <atomic>
@@ -34,7 +36,12 @@
 #include <string>
 #include <vector>
 #include <omp.h>
+#ifdef _WIN32
+#include <windows.h>
+#include <psapi.h>
+#else
 #include <sys/resource.h>
+#endif
 
 using u32 = uint32_t;
 using u64 = uint64_t;
@@ -44,9 +51,16 @@ static double secs(Clock::time_point a, Clock::time_point b) {
     return std::chrono::duration<double>(b - a).count();
 }
 static double peakRssMB() {
+#ifdef _WIN32
+    PROCESS_MEMORY_COUNTERS pmc;
+    pmc.cb = sizeof(pmc);
+    if (!GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc))) return 0.0;
+    return (double)pmc.PeakWorkingSetSize / (1024.0 * 1024.0);  // Windows: bytes
+#else
     rusage ru{};
     getrusage(RUSAGE_SELF, &ru);
     return ru.ru_maxrss / 1024.0;  // Linux: KB
+#endif
 }
 
 struct Rng {
@@ -70,12 +84,16 @@ struct Params {
     u64 seed = 1;
     int exact = 0;         // Held-Karp (solo n <= 20)
     std::string tourOut;
+    std::string inputFile;     // --input: coordenadas desde archivo (TSPLIB EUC_2D o "x y" plano)
+    double tiempoMaxIter = 1e18;  // --tiempo_max: presupuesto de tiempo POR ITERACION (segundos)
 };
 
 // ---------------------------------------------------------------- instancia + rejilla
 struct Instance {
     int n = 0, G = 1, K = 0;
     float cs = 1.f;                 // tamano de celda
+    float scale = 1.f;              // factor de escala aplicado al normalizar a [0,1]^2 (--input)
+    float offX = 0.f, offY = 0.f;   // esquina inferior izquierda del bounding box original (--input)
     std::vector<float> x, y;        // coordenadas (renumeradas por celda)
     std::vector<u32> cellStart;     // CSR de celdas (G*G+1)
     std::vector<u32> cellOf;        // celda de cada ciudad
@@ -91,16 +109,90 @@ struct Instance {
     }
 };
 
-static void buildInstance(Instance& I, const Params& P) {
+// Lectura basica de coordenadas: TSPLIB EUC_2D (NODE_COORD_SECTION ... EOF) o
+// formato plano "x y" por linea (sin encabezados). Devuelve coordenadas en las
+// unidades originales del archivo (sin normalizar).
+static bool loadPointsFromFile(const std::string& path, std::vector<double>& xs,
+                                std::vector<double>& ys, std::string& formato) {
+    FILE* f = fopen(path.c_str(), "r");
+    if (!f) return false;
+    char line[1024];
+    bool tsplib = false, inCoord = false;
+    std::string edgeType = "EUC_2D";
+    while (fgets(line, sizeof(line), f)) {
+        std::string s(line);
+        size_t a = s.find_first_not_of(" \t\r\n");
+        if (a == std::string::npos) continue;
+        size_t b = s.find_last_not_of(" \t\r\n");
+        s = s.substr(a, b - a + 1);
+        if (s.empty()) continue;
+        if (!tsplib && !inCoord) {
+            if (s.rfind("NAME", 0) == 0 || s.rfind("TYPE", 0) == 0 || s.rfind("COMMENT", 0) == 0 ||
+                s.rfind("DIMENSION", 0) == 0 || s.rfind("EDGE_WEIGHT_TYPE", 0) == 0 ||
+                s.rfind("NODE_COORD_SECTION", 0) == 0) {
+                tsplib = true;
+            }
+        }
+        if (tsplib) {
+            if (s.rfind("EDGE_WEIGHT_TYPE", 0) == 0) {
+                size_t p = s.find(':');
+                if (p != std::string::npos) edgeType = s.substr(p + 1);
+            }
+            if (s.rfind("NODE_COORD_SECTION", 0) == 0) { inCoord = true; continue; }
+            if (!inCoord) continue;                 // todavia en encabezados
+            if (s.rfind("EOF", 0) == 0) break;
+            double idx, x, y;
+            if (sscanf(s.c_str(), "%lf %lf %lf", &idx, &x, &y) == 3) { xs.push_back(x); ys.push_back(y); }
+        } else {
+            double x, y;
+            if (sscanf(s.c_str(), "%lf %lf", &x, &y) == 2) { xs.push_back(x); ys.push_back(y); }
+        }
+    }
+    fclose(f);
+    if (tsplib && edgeType.find("EUC_2D") == std::string::npos)
+        fprintf(stderr, "# aviso: EDGE_WEIGHT_TYPE=%s no es EUC_2D; se leen las coordenadas de todas formas (lectura basica)\n",
+                edgeType.c_str());
+    formato = tsplib ? "TSPLIB" : "plano (x y)";
+    return !xs.empty();
+}
+
+static void buildInstance(Instance& I, Params& P) {
+    std::vector<float> rx, ry;
+    if (!P.inputFile.empty()) {
+        std::vector<double> xs, ys; std::string formato;
+        if (!loadPointsFromFile(P.inputFile, xs, ys, formato)) {
+            fprintf(stderr, "no se pudo leer --input %s (o no tiene coordenadas)\n", P.inputFile.c_str());
+            exit(1);
+        }
+        const int nf = (int)xs.size();
+        P.n = nf;
+        double minx = xs[0], maxx = xs[0], miny = ys[0], maxy = ys[0];
+        for (int i = 1; i < nf; i++) {
+            minx = std::min(minx, xs[i]); maxx = std::max(maxx, xs[i]);
+            miny = std::min(miny, ys[i]); maxy = std::max(maxy, ys[i]);
+        }
+        double rangeX = maxx - minx, rangeY = maxy - miny;
+        double scale = std::max(rangeX, rangeY); if (scale <= 0) scale = 1.0;
+        I.scale = (float)scale; I.offX = (float)minx; I.offY = (float)miny;
+        rx.resize(nf); ry.resize(nf);
+        for (int i = 0; i < nf; i++) {
+            rx[i] = (float)((xs[i] - minx) / scale);
+            ry[i] = (float)((ys[i] - miny) / scale);
+        }
+        fprintf(stderr, "# --input %s: %d ciudades leidas (formato %s), escala=%.6f\n",
+                P.inputFile.c_str(), nf, formato.c_str(), scale);
+    } else {
+        const int n0 = P.n;
+        rx.resize(n0); ry.resize(n0);
+        Rng rng(P.seed * 7919 + 13);
+        for (int i = 0; i < n0; i++) { rx[i] = rng.uni(); ry[i] = rng.uni(); }
+        I.scale = 1.f; I.offX = 0.f; I.offY = 0.f;
+    }
     const int n = P.n;
     I.n = n;
     I.G = std::max(1, (int)std::sqrt(n / 2.0));
     I.cs = 1.0f / I.G;
     I.K = std::min(P.K, n - 1);
-    // puntos uniformes en el cuadrado unidad
-    std::vector<float> rx(n), ry(n);
-    Rng rng(P.seed * 7919 + 13);
-    for (int i = 0; i < n; i++) { rx[i] = rng.uni(); ry[i] = rng.uni(); }
     // ordenar por celda (serpiente) => localidad de memoria
     std::vector<u32> ord(n), k(n);
     for (int i = 0; i < n; i++) k[i] = I.key(I.cxOf(rx[i]), I.cxOf(ry[i]));
@@ -320,6 +412,8 @@ int main(int argc, char** argv) {
         else if (a == "--seed") P.seed = std::stoull(nx());
         else if (a == "--exact") P.exact = std::stoi(nx());
         else if (a == "--tour") P.tourOut = nx();
+        else if (a == "--input") P.inputFile = nx();
+        else if (a == "--tiempo_max") P.tiempoMaxIter = std::stod(nx());
         else { fprintf(stderr, "arg desconocido: %s\n", a.c_str()); return 1; }
     }
     const int nth = omp_get_max_threads();
@@ -366,13 +460,21 @@ int main(int argc, char** argv) {
         std::fill(delta.begin(), delta.end(), 0.f);
         for (auto& T : TS) T.bestL = 1e300;
         double sumL = 0;
-#pragma omp parallel reduction(+ : sumL)
+        long antsRun = 0;
+        auto tIterStart = Clock::now();
+#pragma omp parallel reduction(+ : sumL) reduction(+ : antsRun)
         {
             ThreadState& T = TS[omp_get_thread_num()];
 #pragma omp for schedule(dynamic, 1)
             for (int a = 0; a < m; a++) {
+                // --tiempo_max: presupuesto por iteracion. Al agotarse, las hormigas que ya
+                // estaban en curso terminan normalmente (no se interrumpen a medio tour); las
+                // que aun no arrancaban simplemente no se construyen, y la iteracion se cierra
+                // (evaporacion + deposito) con las que si corrieron.
+                if (secs(tIterStart, Clock::now()) >= P.tiempoMaxIter) continue;
                 int start = (int)(T.rng.next() % (u64)n);
                 double L = buildTour(I, T, w.data(), start);
+                antsRun++;
                 sumL += L;
                 if (L < T.bestL) { T.bestL = L; T.bestC = T.tourC; T.bestE = T.tourE; }
                 // deposito Q/L_k sobre las aristas usadas (en ambos sentidos, TSP simetrico)
@@ -413,7 +515,11 @@ int main(int argc, char** argv) {
         }
         itDone = it + 1;
         double dt = secs(ti, Clock::now()), tot = secs(tLoop, Clock::now());
-        printf("%5d  %10.4f  %12.4f  %14.4f  %9.3f  %10.3f\n", it + 1, itBest, gbL, sumL / m, dt, tot);
+        printf("%5d  %10.4f  %12.4f  %14.4f  %9.3f  %10.3f\n", it + 1, itBest, gbL,
+               sumL / (double)std::max(1L, antsRun), dt, tot);
+        if (antsRun < m)
+            printf("# aviso: --tiempo_max=%.3fs agotado en la iteracion %d; se completaron %ld/%d hormigas\n",
+                   P.tiempoMaxIter, it + 1, antsRun, m);
         fflush(stdout);
         if (tot >= P.timeBudget || stallCnt >= P.stall) break;
     }
@@ -433,13 +539,20 @@ int main(int argc, char** argv) {
     printf("# ---- resumen ----\n");
     printf("n=%d m=%d iters=%d tour_valido=%s L_mejor=%.5f (verificado %.5f) L_nn=%.5f mejora_vs_nn=%.2f%%\n",
            n, m, itDone, ok ? "SI" : "NO", gbL, Lchk, Lnn, 100.0 * (Lnn - gbL) / Lnn);
-    if (n >= 1000) {
+    if (n >= 1000 && P.inputFile.empty()) {
+        // BHH asume puntos uniformes en el cuadrado unidad; no aplica a instancias
+        // cargadas con --input (TSPLIB u otras), que no son necesariamente uniformes.
         double est = 0.7124 * std::sqrt((double)n) * (1.0 + 0.33 / std::sqrt((double)n) * 1.0);
         printf("aprox_optimo(BHH)=%.3f  L_mejor/aprox=%.3f\n", est, gbL / est);
     }
     if (P.exact && n <= 20) {
         double opt = heldKarp(I);
         printf("optimo_exacto(Held-Karp)=%.5f  gap=%.3f%%\n", opt, 100.0 * (gbL - opt) / opt);
+    }
+    if (!P.inputFile.empty()) {
+        // factor de escala guardado al normalizar --input a [0,1]^2 (ver buildInstance)
+        printf("unidades_originales: factor_escala=%.6f L_mejor=%.5f L_nn=%.5f\n",
+               I.scale, gbL * I.scale, Lnn * I.scale);
     }
     printf("tiempo: preparacion=%.3f s  ACO=%.3f s  total=%.3f s  (%.4f s/iter)\n",
            secs(t0, t1), secs(tLoop, t2), secs(t0, t2), secs(tLoop, t2) / std::max(1, itDone));
