@@ -27,8 +27,8 @@ proyecto deben citar esta máquina.
 | ninja | Sí (vino con el paquete WinLibs) | — | No es imprescindible |
 | make | Sí (`mingw32-make`, vino con el paquete WinLibs) | — | No es imprescindible |
 | git | Sí | 2.53.0.windows.2 | Sí. Identidad configurada: Camilo Diaz Garcia <camilodgarcia23@gmail.com> |
-| Credential manager de git | Sí | `credential.helper=manager` (Git Credential Manager) | Sí, en principio; no pide contraseña en texto plano. Falta confirmar con un push real que no bloquee de forma interactiva |
-| Acceso de lectura al remoto `https://github.com/CamiloDG07/ACO_IA.git` | Sí | `git ls-remote` responde con éxito (repositorio vacío, sin refs) | Sí |
+| Credential manager de git | Sí | `credential.helper=manager` (Git Credential Manager) | Sí. Confirmado con dos `git push origin main` reales, sin pedir contraseña ni bloquear de forma interactiva |
+| Acceso de lectura/escritura al remoto `https://github.com/CamiloDG07/ACO_IA.git` | Sí | `git ls-remote` y `git push` responden con éxito | Sí |
 | Python | Sí | 3.14.3 | Sí |
 | numpy | Sí | 2.5.2 | Sí |
 | pandas | Sí | 3.0.5 | Sí |
