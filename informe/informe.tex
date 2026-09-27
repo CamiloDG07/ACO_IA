@@ -542,7 +542,33 @@ una vez cerradas las corridas largas (bloque C).}
 
 % ====================================================================
 \section{Discusión}
-\emph{Pendiente.}
+El resultado más claro de este trabajo es que \textbf{la representación de
+los datos importa más que el número de hormigas}: pasar de una matriz densa
+$O(n^2)$ a una lista de $K$ vecinas $O(nK)$ es lo que hace viable siquiera
+intentar $n=200\,000$ (320 GB contra unas decenas de MB medidos), mientras
+que subir el número de hormigas, más allá de cierto punto, da rendimientos
+claramente decrecientes en calidad (sección~\ref{sec:numero-agentes}) a
+cambio de un costo que crece de forma lineal. La recomendación de la
+literatura del Ant System de usar $m=n$ hormigas tiene sentido teórico
+(cobertura de puntos de partida, una regla simple que escala con el
+problema) pero, en esta máquina y con este presupuesto de tiempo, no es
+practicable para $n=200\,000$: de ahí la decisión de ingeniería de topar
+$m$ en 20\,000, documentada como tal y no como un óptimo universal.
+
+El barrido de parámetros mostró además que optimizar cada parámetro por
+separado (manteniendo los demás en un valor por defecto) no garantiza la
+mejor combinación conjunta: la candidata construida así resultó, de hecho,
+ligeramente peor que la configuración de referencia. Lo que sí dio una
+mejora estadísticamente significativa fue una decisión estructural
+distinta: activar la segunda capa de feromona. Esto sugiere que, en
+trabajos futuros con más tiempo de cómputo disponible, valdría la pena un
+barrido conjunto (no de un factor a la vez) alrededor de la configuración
+con segunda feromona, en vez de seguir optimizando parámetros individuales
+de la capa principal.
+
+\emph{(Esta sección se completa con los hallazgos de la comparación a igual
+presupuesto de cómputo en $n=200\,000$, bloque C, incluida en el cierre del
+proyecto.)}
 
 % ====================================================================
 \section{Limitaciones}
@@ -599,6 +625,56 @@ para el detalle de cada cita).
 \item Hurbans, R. (2020). \emph{Grokking Artificial Intelligence
 Algorithms}. Shelter Island, NY: Manning Publications. Capítulo 6 (Ant
 Colony Optimization).
+\end{itemize}
+
+% ====================================================================
+\section{Anexo}
+
+\subsection{Cómo reproducir cada tabla y figura}
+Todos los comandos se ejecutan desde la raíz del repositorio
+(\texttt{D:\textbackslash camilo\textbackslash Documentos\textbackslash ACO\_IA}), con los ejecutables ya
+compilados (ver \texttt{README.md}).
+
+\begin{itemize}
+\item \textbf{Tabla~\ref{tab:n20} (n=20)}: \texttt{resultados/instancia\_n20.csv},
+generada con 5 llamadas a \texttt{aco\_tsp.exe --n 20 --ants 20 --iters 100
+--K 19 --exact 1 --seed \{1..5\}}; tabla producida por
+\texttt{python scripts/generar\_figuras.py tabla\_n20}.
+\item \textbf{Tabla~\ref{tab:n2000} (n=2\,000)}: \texttt{python
+scripts/seleccion\_configuracion.py} (8 semillas, 3 configuraciones); tabla
+producida por \texttt{python scripts/generar\_figuras.py tabla\_n2000}.
+\item \textbf{Figura de crecimiento factorial}: \texttt{python
+scripts/generar\_figuras.py factorial} (sin dependencias de
+\texttt{resultados/}, cálculo directo con \texttt{lgamma}).
+\item \textbf{Diagramas de caja por configuración}: \texttt{python
+scripts/experimentos\_fase2.py barrido\_parametros} y luego
+\texttt{python scripts/generar\_figuras.py boxplots}.
+\item \textbf{Tiempo vs. m, n=200\,000}: \texttt{scripts/ejecutar\_corridas\_largas.ps1}
+(punto 1) y luego \texttt{python scripts/generar\_figuras.py tiempo\_vs\_m}.
+\item El resto de figuras y tablas (convergencia, mapas de calor,
+aceleración por hilos, memoria por componente, tours finales) se generan
+con las funciones correspondientes de \texttt{scripts/generar\_figuras.py},
+listadas al final de ese archivo.
+\end{itemize}
+
+\subsection{Glosario corto}
+\begin{itemize}
+\item \textbf{Hormiga (agente)}: unidad de cómputo que construye un tour
+completo por iteración, siguiendo la regla de transición.
+\item \textbf{Feromona ($\tau$)}: valor asociado a cada arista que resume,
+de forma indirecta, qué tan buena ha sido esa arista en tours recientes.
+\item \textbf{Heurística ($\eta$)}: información a priori sobre el problema,
+en este caso el inverso de la distancia.
+\item \textbf{Iteración}: ciclo completo de construcción de $m$ tours,
+evaporación y depósito de feromona.
+\item \textbf{Estigmergia}: coordinación indirecta entre agentes a través
+de cambios que dejan en un medio compartido (aquí, la feromona).
+\item \textbf{Lista de candidatas ($K$)}: las $K$ ciudades más cercanas a
+cada ciudad, usadas para restringir el costo de la construcción de $O(n)$ a
+$O(K)$ por paso.
+\item \textbf{Estancamiento}: situación en la que todas las hormigas de una
+iteración construyen el mismo tour (o uno casi idéntico), típicamente por
+una feromona demasiado concentrada en una sola ruta.
 \end{itemize}
 
 \end{document}

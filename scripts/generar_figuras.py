@@ -192,12 +192,246 @@ def fig_tiempo_vs_m():
     _guardar_tabla("costo_m_n200000.tex", tabla)
 
 
+# ---------------------------------------------------------------- Figura 2: convergencia
+def fig_convergencia():
+    for n_val, nombre in [(20, "convergencia_n20.csv"), (2000, "convergencia_n2000.csv")]:
+        ruta = _ruta_r(nombre)
+        if not os.path.exists(ruta):
+            continue
+        df = pd.read_csv(ruta)
+        fig, ax = plt.subplots(figsize=(6, 4))
+        for i, s in enumerate(sorted(df["seed"].unique())):
+            sub = df[df["seed"] == s]
+            ax.plot(sub["iter"], sub["mejor_global"], color=PALETA[i % len(PALETA)], label=f"semilla {s}")
+        ax.set_xlabel("Iteración")
+        ax.set_ylabel("Mejor global")
+        ax.set_title(f"Convergencia, n={n_val}")
+        ax.legend(fontsize=8)
+        _guardar_fig(fig, f"02_convergencia_n{n_val}.png")
+
+    ruta200k = _ruta_r("convergencia_n200000_punto5.csv")
+    if os.path.exists(ruta200k):
+        df = pd.read_csv(ruta200k)
+        fig, ax = plt.subplots(figsize=(6, 4))
+        for i, s in enumerate(sorted(df["seed"].unique())):
+            sub = df[df["seed"] == s]
+            ax.plot(sub["iter"], sub["mejor_global"], color=PALETA[i % len(PALETA)], label=f"semilla {s}")
+        ax.set_xlabel("Iteración")
+        ax.set_ylabel("Mejor global")
+        ax.set_title("Convergencia, n=200\\,000 (m=20\\,000)".replace("\\,", " "))
+        ax.legend(fontsize=8)
+        _guardar_fig(fig, "02_convergencia_n200000.png")
+
+
+# ---------------------------------------------------------------- Figura 4: mapas de calor
+def _heatmap(ruta_csv, col_x, col_y, nombre_png, titulo):
+    if not os.path.exists(ruta_csv):
+        print(f"{ruta_csv} no existe todavia; se omite {nombre_png}")
+        return
+    df = pd.read_csv(ruta_csv)
+    piv = df.groupby([col_y, col_x])["L_mejor"].mean().unstack()
+    fig, ax = plt.subplots(figsize=(6, 5))
+    im = ax.imshow(piv.values, cmap="viridis_r", aspect="auto")
+    ax.set_xticks(range(len(piv.columns))); ax.set_xticklabels(piv.columns)
+    ax.set_yticks(range(len(piv.index))); ax.set_yticklabels(piv.index)
+    ax.set_xlabel(col_x); ax.set_ylabel(col_y)
+    ax.set_title(titulo)
+    for i in range(len(piv.index)):
+        for j in range(len(piv.columns)):
+            ax.text(j, i, f"{piv.values[i,j]:.1f}", ha="center", va="center", color="white", fontsize=7)
+    fig.colorbar(im, ax=ax, label="Longitud media del mejor tour")
+    _guardar_fig(fig, nombre_png)
+
+
+def fig_heatmaps():
+    _heatmap(_ruta_r("heatmap_alpha_beta.csv"), "alpha", "beta",
+              "04_heatmap_alpha_beta.png", "Calidad media: alpha x beta (n=2\\,000)".replace("\\,", " "))
+    _heatmap(_ruta_r("heatmap_rho_qfac.csv"), "rho", "qfac",
+              "04_heatmap_rho_qfac.png", "Calidad media: rho x qfac (n=2\\,000)".replace("\\,", " "))
+
+
+# ---------------------------------------------------------------- Figura 5: efecto de K y segunda feromona
+def fig_efecto_k_y_segunda_feromona():
+    df = pd.read_csv(_ruta_r("barrido_parametros.csv"))
+    sub = df[df["parametro_barrido"] == "K"]
+    g = sub.groupby("valor_barrido")["L_mejor"].agg(["mean", "std"]).reset_index()
+    fig, ax = plt.subplots(figsize=(6, 4))
+    ax.errorbar(g["valor_barrido"], g["mean"], yerr=g["std"], fmt="o-", color=PALETA[0])
+    ax.set_xlabel("K (tamaño de la lista de candidatas)")
+    ax.set_ylabel("Longitud media del mejor tour")
+    ax.set_title("Efecto de K (n=2\\,000)".replace("\\,", " "))
+    _guardar_fig(fig, "05_efecto_K.png")
+
+    sc = pd.read_csv(_ruta_r("seleccion_configuracion.csv"))
+    ref = sc[sc["configuracion"] == "referencia"]["L_mejor"].astype(float)
+    con2 = sc[sc["configuracion"] == "candidata_b_segunda_feromona"]["L_mejor"].astype(float)
+    fig, ax = plt.subplots(figsize=(5, 4))
+    bp = ax.boxplot([ref, con2], tick_labels=["sin segunda\nferomona", "con segunda\nferomona"],
+                     patch_artist=True)
+    for patch, color in zip(bp["boxes"], [PALETA[1], PALETA[2]]):
+        patch.set_facecolor(color); patch.set_alpha(0.5)
+    ax.set_ylabel("Longitud del mejor tour")
+    ax.set_title("Efecto de la segunda feromona (n=2\\,000, 8 semillas)".replace("\\,", " "))
+    _guardar_fig(fig, "05_efecto_segunda_feromona.png")
+
+
+# ---------------------------------------------------------------- Figura 7: aceleracion y eficiencia
+def fig_aceleracion_hilos():
+    ruta = _ruta_r("aceleracion_hilos.csv")
+    if not os.path.exists(ruta):
+        print("aceleracion_hilos.csv no existe todavia; se omite fig_aceleracion_hilos")
+        return
+    df = pd.read_csv(ruta)
+    g = df.groupby("hilos")["t_aco_s"].mean().reset_index()
+    t1 = g.loc[g["hilos"] == 1, "t_aco_s"].values[0]
+    g["aceleracion"] = t1 / g["t_aco_s"]
+    g["eficiencia"] = g["aceleracion"] / g["hilos"]
+
+    fig, ax1 = plt.subplots(figsize=(6, 4))
+    ax1.plot(g["hilos"], g["aceleracion"], "o-", color=PALETA[0], label="aceleración medida")
+    ax1.plot(g["hilos"], g["hilos"], "--", color="gray", label="aceleración ideal")
+    ax1.set_xlabel("Número de hilos")
+    ax1.set_ylabel("Aceleración (t$_1$/t$_p$)")
+    ax2 = ax1.twinx()
+    ax2.plot(g["hilos"], g["eficiencia"], "s-", color=PALETA[1], label="eficiencia")
+    ax2.set_ylabel("Eficiencia (aceleración/hilos)")
+    lines1, labels1 = ax1.get_legend_handles_labels()
+    lines2, labels2 = ax2.get_legend_handles_labels()
+    ax1.legend(lines1 + lines2, labels1 + labels2, fontsize=8, loc="upper left")
+    ax1.set_title("Aceleración y eficiencia vs. número de hilos (n=2\\,000)".replace("\\,", " "))
+    _guardar_fig(fig, "07_aceleracion_hilos.png")
+
+
+# ---------------------------------------------------------------- Figura 8: memoria densa vs dispersa
+def fig_memoria_densa_dispersa():
+    disp = pd.read_csv(_ruta_r("escalamiento_disperso.csv"))
+    dens = pd.read_csv(_ruta_r("escalamiento_denso.csv"))
+    gd = disp.groupby("n_meta")["pico_mem_mb"].mean()
+    ge = dens.groupby("n_meta")["pico_mem_mb"].mean()
+
+    fig, ax = plt.subplots(figsize=(6, 4))
+    ax.plot(gd.index, gd.values, "o-", color=PALETA[0], label="dispersa (medida)")
+    ax.plot(ge.index, ge.values, "s-", color=PALETA[1], label="densa (medida, n≤5\\,000)".replace("\\,", " "))
+    ns_teoria = np.array(sorted(set(gd.index) | {200000}))
+    mem_densa_teorica = 2 * 4 * ns_teoria.astype(float) ** 2 / 1e6  # MB
+    ax.plot(ns_teoria, mem_densa_teorica, "--", color=PALETA[1], alpha=0.6, label="densa (calculada, $2\\cdot4n^2$)")
+    ax.axhline(15.88 * 1024, color="red", linestyle=":", label="RAM de la máquina (15,88 GB)")
+    ax.set_xscale("log"); ax.set_yscale("log")
+    ax.set_xlabel("n (ciudades)")
+    ax.set_ylabel("Memoria pico (MB)")
+    ax.set_title("Memoria: densa vs. dispersa (log-log)")
+    ax.legend(fontsize=7)
+    _guardar_fig(fig, "08_memoria_densa_dispersa.png")
+
+
+# ---------------------------------------------------------------- Figura 9: memoria por componente
+def fig_memoria_por_componente(n=200000, K=8, hilos=12):
+    # Tamanos teoricos en bytes, floats de 4 bytes salvo donde se indique.
+    componentes = {
+        "coordenadas (x,y)": 2 * n * 4,
+        "vecinas (nbr, u32)": n * K * 4,
+        "distancias (dst)": n * K * 4,
+        "tau": n * K * 4,
+        "tau2 (segunda feromona)": n * K * 4,
+        "pesos (w, etaB, delta)": 3 * n * K * 4,
+        "estado por hilo (vis,cnt,tourC,tourE,bestC,bestE)": hilos * 6 * n * 4,
+    }
+    nombres = list(componentes.keys())
+    valores_mb = [v / 1e6 for v in componentes.values()]
+    total = sum(valores_mb)
+
+    fig, ax = plt.subplots(figsize=(7, 4))
+    ax.barh(nombres, valores_mb, color=PALETA[0])
+    ax.set_xlabel("Memoria estimada (MB)")
+    ax.set_title(f"Memoria por componente (n={n}, K={K}, {hilos} hilos); total teórico ≈ {total:.1f} MB")
+    _guardar_fig(fig, "09_memoria_por_componente.png")
+    print(f"memoria teorica total: {total:.1f} MB (comparar con el pico medido en escalamiento_disperso.csv)")
+
+
+# ---------------------------------------------------------------- Figura 12: longitud vs NN y BHH
+def fig_longitud_vs_referencias():
+    filas = []
+    n20 = pd.read_csv(_ruta_r("instancia_n20.csv"))
+    filas.append(("n=20", n20["L_mejor"].mean(), n20["optimo_exacto"].mean(), None))
+    sc = pd.read_csv(_ruta_r("seleccion_configuracion.csv"))
+    ref2000 = sc[sc["configuracion"] == "candidata_b_segunda_feromona"]
+    bhh2000 = 0.7124 * math.sqrt(2000) * 1.033  # misma formula del programa (factor asintotico)
+    filas.append(("n=2\\,000", ref2000["L_mejor"].astype(float).mean(), None, bhh2000))
+
+    ruta200k = _ruta_r("resultado_n200000_punto5.csv")
+    if os.path.exists(ruta200k):
+        d = pd.read_csv(ruta200k)
+        bhh200k = 0.7124 * math.sqrt(200000) * 1.033
+        filas.append(("n=200\\,000", d["L_mejor"].astype(float).mean(), None, bhh200k))
+
+    print("Comparacion longitud vs referencias (ver tabla generada en informe/tablas/longitud_referencias.tex):")
+    lineas = []
+    for nombre, l_aco, opt, bhh in filas:
+        opt_s = f"{opt:.3f}" if opt is not None else "--"
+        bhh_s = f"{bhh:.3f}" if bhh is not None else "--"
+        lineas.append(f"{nombre} & {l_aco:.3f} & {opt_s} & {bhh_s} \\\\")
+        print(nombre, l_aco, opt, bhh)
+    tabla = (
+        "\\begin{table}[H]\\centering\n"
+        "\\caption{Longitud del mejor tour contra óptimo exacto (n=20) y aproximación BHH (n grande).}\n"
+        "\\label{tab:longitud_referencias}\n"
+        "\\begin{tabular}{lrrr}\\toprule\n"
+        "Instancia & $L_{ACO}$ & Óptimo exacto & Aprox. BHH \\\\\\midrule\n"
+        + "\n".join(lineas) +
+        "\n\\bottomrule\\end{tabular}\\end{table}\n"
+    )
+    _guardar_tabla("longitud_referencias.tex", tabla)
+
+
+# ---------------------------------------------------------------- Figura 11: tours finales
+def fig_tours_finales():
+    for nombre_csv, titulo, archivo in [
+        ("tour_n20.csv", "Tour final, n=20", "11_tour_n20.png"),
+        ("tour_n2000.csv", "Tour final, n=2\\,000".replace("\\,", " "), "11_tour_n2000.png"),
+    ]:
+        ruta = _ruta_r(nombre_csv)
+        if not os.path.exists(ruta):
+            print(f"{ruta} no existe todavia; correr aco_tsp.exe con --tour antes de esta figura")
+            continue
+        df = pd.read_csv(ruta, sep=r"\s+", header=None, names=["ciudad", "x", "y"])
+        xs = list(df["x"]) + [df["x"].iloc[0]]
+        ys = list(df["y"]) + [df["y"].iloc[0]]
+        fig, ax = plt.subplots(figsize=(5, 5))
+        ax.plot(xs, ys, "-o", color=PALETA[0], markersize=3, linewidth=1)
+        ax.set_title(titulo)
+        ax.set_aspect("equal")
+        _guardar_fig(fig, archivo)
+
+    ruta200k = _ruta_r("tour_n200000.csv")
+    if os.path.exists(ruta200k):
+        df = pd.read_csv(ruta200k, sep=r"\s+", header=None, names=["ciudad", "x", "y"])
+        # fragmento ampliado: recorte central del 2% del area
+        cx, cy = df["x"].median(), df["y"].median()
+        r = 0.05
+        frag = df[(df["x"].between(cx - r, cx + r)) & (df["y"].between(cy - r, cy + r))]
+        fig, ax = plt.subplots(figsize=(5, 5))
+        ax.plot(frag["x"], frag["y"], "-o", color=PALETA[0], markersize=2, linewidth=0.8)
+        ax.set_title("Fragmento ampliado del tour, n=200\\,000".replace("\\,", " "))
+        ax.set_aspect("equal")
+        _guardar_fig(fig, "11_tour_n200000_fragmento.png")
+    else:
+        print("tour_n200000.csv no existe todavia; se omite el fragmento de n=200000")
+
+
 FUNCIONES = {
     "factorial": fig_factorial,
     "tabla_n20": tabla_resultados_n20,
     "tabla_n2000": tabla_resultados_n2000,
     "boxplots": fig_boxplots_configuracion,
     "tiempo_vs_m": fig_tiempo_vs_m,
+    "convergencia": fig_convergencia,
+    "heatmaps": fig_heatmaps,
+    "efecto_k_segunda_feromona": fig_efecto_k_y_segunda_feromona,
+    "aceleracion_hilos": fig_aceleracion_hilos,
+    "memoria_densa_dispersa": fig_memoria_densa_dispersa,
+    "memoria_por_componente": fig_memoria_por_componente,
+    "longitud_vs_referencias": fig_longitud_vs_referencias,
+    "tours_finales": fig_tours_finales,
 }
 
 
