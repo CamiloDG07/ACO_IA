@@ -43,3 +43,8 @@ docs/_*
 # publican en el repositorio (ver docs/bitacora.md para el motivo)
 docs/PROMPT_UNICO_CLAUDE_CODE.md
 docs/PROMPT_FINAL_AUTONOMO.md
+
+# entregable de Moodle: artefacto de empaquetado generado a partir de
+# archivos ya versionados, no se versiona el zip ni la carpeta de trabajo
+entregable/
+ACO_TSP_Camilo_Diaz.zip
