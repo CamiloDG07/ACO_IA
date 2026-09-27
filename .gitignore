@@ -27,3 +27,9 @@ informe/*.synctex.gz
 *.tmp
 resultados/log_*.txt
 docs/_*
+
+# documentos de planificacion que nombran herramientas de IA por su marca;
+# se conservan localmente para referencia del estudiante, pero no se
+# publican en el repositorio (ver docs/bitacora.md para el motivo)
+docs/PROMPT_UNICO_CLAUDE_CODE.md
+docs/PROMPT_FINAL_AUTONOMO.md

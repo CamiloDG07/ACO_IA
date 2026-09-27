@@ -170,7 +170,7 @@ principio a fin sin preguntar, porque estará dormido. Se sigue ese modo:
 ninguna decisión no cubierta se deja sin anotar aquí, ningún dato se inventa,
 y cualquier error se documenta y no detiene el resto del trabajo.
 
-**Reorientación (bloque 1):** se leyeron `docs/PROMPT_UNICO_CLAUDE_CODE.md`,
+**Reorientación (bloque 1):** se releyeron el plan base del taller,
 `docs/bitacora.md`, `docs/entorno.md`, `git log --oneline` y `resultados/`.
 Confirmado: Fases 0 y 1 cerradas; Fase 2 con barrido de parámetros, barrido
 de m, criterio de parada, escalamiento (dispersa+densa) y costo de m en
@@ -234,3 +234,17 @@ había commiteado). Punto 5 (la corrida real) no se vio afectado, porque mide
 sus tiempos con `Get-Date` directamente, no parseando el CSV. Se vuelve a
 correr el punto 1 (barato, ~8 min) después de que terminen los puntos 5 y 6,
 sin relanzar nada de lo que ya corrió bien.
+Punto 5, semilla 1: inicio 04:46:23, fin 05:00:21, duracion 14 min
+
+**Decisión no cubierta explícitamente (regla 1 del modo autónomo):** el
+propio documento que pidió el modo autónomo exige, en su sección de Git, no
+mencionar a ningún asistente de IA en "archivos del repositorio", pero el
+estudiante también pidió copiar ese mismo documento a `docs/` (que por
+nombre y contenido sí menciona una herramienta de este tipo). Para resolver
+la tensión sin desobedecer ninguna de las dos instrucciones: el archivo se
+conserva en el disco local del estudiante (en `docs/`, tal como se pidió),
+pero se saca del control de versiones (`git rm --cached`, y se agrega a
+`.gitignore`) para que el repositorio publicado no contenga ese nombre. Se
+corrigió también la única mención indirecta que quedaba en esta bitácora
+(el nombre de archivo del plan base), sin alterar el relato de lo que
+efectivamente se hizo.

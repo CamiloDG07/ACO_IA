@@ -17,7 +17,7 @@
 
 \geometry{top=2.5cm, bottom=2.5cm, left=3cm, right=3cm}
 \hypersetup{colorlinks=true, linkcolor=black, urlcolor=blue, citecolor=black}
-\graphicspath{{../resultados/figuras/}{figuras_codigo/}}
+\graphicspath{{../figuras/}}
 
 \pagestyle{fancy}
 \fancyhf{}
@@ -610,7 +610,33 @@ o cuyo resultado difiera de lo esperado; ver \texttt{docs/bitacora.md} y
 
 % ====================================================================
 \section{Conclusiones}
-\emph{Pendiente.}
+\begin{enumerate}
+\item El espacio de búsqueda del TSP crece de forma factorial
+(sección~\ref{sec:espacio-factorial}); para $n=200\,000$ ninguna búsqueda
+exhaustiva es concebible, y el aporte central de este trabajo es una
+representación de datos ($O(nK)$, no $O(n^2)$) que hace viable siquiera
+intentar esa instancia en una computadora personal.
+\item Ahorrar memoria y ahorrar tiempo, en este problema, son la misma
+decisión de diseño: la lista de $K$ vecinas, la rejilla espacial y los
+buffers por hilo (sección~\ref{sec:estrategias}) resuelven ambos a la vez,
+no por separado.
+\item La convención de la literatura ($m=n$ para Ant System) tiene
+respaldo teórico verificado (sección~\ref{sec:numero-agentes}), pero en la
+práctica de este equipo, con esta máquina y este tiempo disponible, no es
+ejecutable para $n=200\,000$; el tope adoptado ($m=20\,000$) es una decisión
+de ingeniería explícita, no una regla universal.
+\item Optimizar cada parámetro por separado no equivale a optimizar la
+combinación conjunta: el barrido de un factor a la vez identificó una
+mejora real (la segunda capa de feromona), pero también un espejismo
+(combinar los mejores valores individuales no mejoró el resultado).
+\item La elección de C++ con OpenMP fue una decisión práctica (código base
+validado, paralelismo casi sin código adicional), no el resultado de
+descartar otros lenguajes por incapacidad: C y Rust habrían sido, en
+principio, igual de aptos.
+\end{enumerate}
+
+\emph{(Este listado se revisa al cerrar el bloque C con los hallazgos
+definitivos de $n=200\,000$; ver \texttt{docs/RESUMEN\_FINAL.md}.)}
 
 % ====================================================================
 \section{Referencias}
