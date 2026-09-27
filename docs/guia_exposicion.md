@@ -35,30 +35,67 @@ ingeniería para este equipo, no un óptimo teórico.
 
 ### ¿Qué pasa con alpha = 0 o beta = 0?
 
-*(pendiente, Fase 2/4: con alpha = 0 la búsqueda es un vecino más cercano
-estocástico con puntos de partida aleatorios, sin memoria de feromona; con
-beta = 0 solo la feromona guía la búsqueda, sin heurística de distancia, lo
-que favorece la convergencia prematura a un tour subóptimo)*
+Con alpha = 0, la regla de transición (ecuación de la sección "Marco
+teórico" del informe) ignora la feromona: cada hormiga elige entre sus
+candidatas con probabilidad proporcional solo a $\eta^\beta = (1/d)^\beta$,
+es decir, un vecino más cercano estocástico con puntos de partida
+aleatorios, sin memoria de lo que hicieron las hormigas anteriores. Con
+beta = 0, ocurre lo contrario: solo importa $\tau^\alpha$, sin heurística de
+distancia; como la feromona inicial es uniforme, las primeras iteraciones
+son casi aleatorias, y una vez que una arista se refuerza un poco, con
+alpha > 1 esa ventaja se amplifica rápido y casi todas las hormigas
+convergen al mismo camino (estancamiento), que en general es un tour
+notablemente peor que con beta > 0, porque no hay ninguna guía hacia
+ciudades cercanas.
 
 ### ¿Por qué la selección determinista empeora la calidad?
 
-*(pendiente, Fase 2: elegir siempre la candidata de mayor peso, en vez de la
-ruleta probabilística, elimina la exploración; todas las hormigas de una
-iteración terminan siguiendo el mismo camino y el algoritmo se estanca en el
-primer óptimo local que encuentra)*
+Elegir siempre la candidata de mayor peso (en vez de la ruleta
+probabilística) elimina la exploración: en la primera iteración, con
+feromona uniforme, todas las hormigas eligen la misma arista de menor
+distancia en cada paso, así que casi todas terminan construyendo el mismo
+tour (o uno muy parecido) desde su ciudad de partida. Sin variedad entre las
+hormigas de una iteración no hay comparación real entre alternativas, y la
+feromona termina reforzando el primer óptimo local que el algoritmo
+encontró, sin ninguna posibilidad de escapar de él en iteraciones
+posteriores.
 
 ### ¿Cómo cambiaría con un costo multiobjetivo?
 
-*(pendiente, Fase 4/5: se necesitaría una segunda medida de costo por arista
-—por ejemplo tiempo o riesgo, además de distancia—, y una forma de combinar
-ambas en la regla de transición o de mantener un frente de Pareto en vez de
-un único mejor global)*
+Se necesitaría una segunda medida de costo por arista (por ejemplo, tiempo
+de viaje o riesgo, además de la distancia), y una forma de combinarla en la
+regla de transición: la más simple es una suma ponderada de las dos medidas
+en el cálculo de $\eta_{ij}$; una alternativa más completa es mantener un
+frente de Pareto de soluciones no dominadas en vez de un único mejor global,
+lo que exigiría rehacer la parte de "mejor de la iteración/mejor global" del
+algoritmo (`aco_tsp.cpp`, bucle principal) para comparar tours por
+dominancia en vez de por un solo número.
 
 ### ¿Para qué sirven 200 000 hormigas?
 
-*(pendiente: se completa con los datos de la comparación a igual presupuesto
-de cómputo en n = 200 000, Fase 2)*
+*(se completa con los datos de la comparación a igual presupuesto de
+cómputo en n = 200 000: m = 2 048 contra m = 20 000, mismo tiempo de reloj,
+ver `docs/decisiones_diseno.md` y `docs/resultados.md` una vez cerradas las
+corridas largas)*
+
+### ¿Habría sido más rápido usar C, Rust u otro lenguaje?
+
+Cualitativamente, no de forma apreciable: se espera que C, C++ y Rust den un
+rendimiento del mismo orden en este problema (pocas diferencias
+porcentuales), porque el tiempo lo dominan los accesos a memoria, el número
+de hilos y el algoritmo, no el lenguaje. No se midió ningún otro lenguaje en
+este trabajo. Rust habría sido una alternativa igualmente válida si el
+criterio principal hubiera sido la seguridad de memoria (su compilador
+garantiza en tiempo de compilación errores que en C++ solo aparecen en
+tiempo de ejecución); C habría sido igual de rápido, con más código para
+lograr lo que la librería estándar de C++ da de fábrica. Ver
+`docs/decisiones_diseno.md`, sección "Elección de lenguaje", para la tabla
+completa.
 
 ## Guion por integrante
 
-*(pendiente, Fase 5)*
+*(pendiente: cada integrante completa su parte antes de la sustentación;
+la estructura sugerida es introducción y objetivo (integrante 1), diseño de
+la solución y estrategias de ahorro (integrante 2), resultados y
+limitaciones (integrante 3), con las preguntas de arriba repartidas según
+quién presente esa sección)*

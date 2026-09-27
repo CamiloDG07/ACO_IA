@@ -162,3 +162,75 @@ indicación previa sobre lenguaje, número de hormigas y corridas largas:
   2. Comparación a igual presupuesto de cómputo en n=200000: m=2048 contra
      m=20000, mismo tiempo de reloj (propuesto 15 min por corrida), 3
      semillas. Estimado ~1 h 30 min.
+
+## 2026-09-27 — Modo autónomo: cierre completo del proyecto
+
+El estudiante entregó `docs/PROMPT_FINAL_AUTONOMO.md` y pidió ejecutarlo de
+principio a fin sin preguntar, porque estará dormido. Se sigue ese modo:
+ninguna decisión no cubierta se deja sin anotar aquí, ningún dato se inventa,
+y cualquier error se documenta y no detiene el resto del trabajo.
+
+**Reorientación (bloque 1):** se leyeron `docs/PROMPT_UNICO_CLAUDE_CODE.md`,
+`docs/bitacora.md`, `docs/entorno.md`, `git log --oneline` y `resultados/`.
+Confirmado: Fases 0 y 1 cerradas; Fase 2 con barrido de parámetros, barrido
+de m, criterio de parada, escalamiento (dispersa+densa) y costo de m en
+n=200000 ya completos (commit `3c222cb`). No se encontró ningún archivo de
+instancias del docente en `ACO_IA` ni en `Descargas`; se continúa con el
+generador uniforme por semilla, como estaba decidido.
+
+**Bloque A — cerrar corridas cortas:**
+- `resultados/instancia_n20.csv`: n=20, m=20 (regla m=min(n,20000)), K=19,
+  5 semillas, contra Held-Karp. 4 de 5 semillas llegan al óptimo exacto; la
+  semilla 1 queda a 1,176 % (mismo orden que la nota preliminar del
+  enunciado: "2 de 3 semillas... y una quedó en 1,18 %").
+- **Selección de configuración para las corridas grandes**
+  (`scripts/seleccion_configuracion.py`,
+  `resultados/seleccion_configuracion.csv` y
+  `resultados/seleccion_configuracion_veredicto.txt`): se comparó la
+  configuración de referencia (K=8, alpha=1.5, beta=5, rho=0.1, qfac=3,
+  sin segunda feromona) contra dos candidatas construidas con los mejores
+  valores individuales del barrido de parámetros, con las mismas 8 semillas
+  (comparación apareada) y prueba de Wilcoxon:
+  - Candidata con los mejores valores individuales de cada parámetro
+    (K=5, alpha=2.0, beta=8, rho=0.5, qfac=10): media 38,15 contra 37,94 de
+    la referencia, **peor** (p=0,055, no significativo de todas formas).
+    Confirma que optimizar cada parámetro por separado, manteniendo los
+    demás en su valor por defecto, no garantiza una mejor combinación
+    conjunta (posible interacción entre parámetros).
+  - Candidata con segunda feromona activada (misma referencia, `two=1`,
+    `alpha2=1.0`, que cumple `alpha2 < alpha` como pide el diseño): media
+    37,50 contra 37,94, **mejor**, con p=0,0078 (Wilcoxon apareado,
+    n=8 semillas) — diferencia estadísticamente significativa.
+  - **Veredicto: se adopta la configuración con segunda feromona** (K=8,
+    alpha=1.5, beta=5, rho=0.1, qfac=3, two=1, alpha2=1.0) para el resultado
+    oficial de n=2000 y para las corridas grandes de n=200000 en vez de la
+    configuración de referencia original del prompt base, siguiendo la regla
+    de "usar la mejor y explicarlo" cuando el barrido muestra una diferencia
+    clara.
+- **Curvas de convergencia** (`scripts/convergencia.py`,
+  `resultados/convergencia_n20.csv`, `resultados/convergencia_n2000.csv`):
+  3 semillas cada una, con la configuración ganadora, capturando cada línea
+  de iteración (mejor de la iteración, mejor global, media de las hormigas,
+  tiempo) para la Figura 2 del informe.
+- Ya estaban completos de antes (commit `3c222cb`): barrido de alpha, beta,
+  rho, qfac, K (5 semillas cada valor), barrido de m, segunda feromona con
+  alpha2 en 0,1/0,3/0,5/1,0, criterios de parada, y escalamiento dispersa y
+  densa. No se relanzó nada de eso.
+- Confirmado (`Get-Process` sin `aco_tsp`/`aco_denso` activos) que no queda
+  ningún proceso de ACO corriendo antes de pasar al bloque B/C.
+
+### Corridas largas: inicio 2026-09-27 04:41:37
+Punto 1 (costo por iteracion, 3 repeticiones) terminado: 2026-09-27 04:46:23
+
+**Error detectado (bloque B/C, punto 1):** el script
+`scripts/ejecutar_corridas_largas.ps1` tenía un error de indexado al extraer
+`t_aco` de la línea `CSV,...`: `Split(",")` sobre la línea completa incluye
+el token `CSV` como primer elemento, corriendo el índice de todos los campos
+en uno; el script leía `campos[8]` (que en realidad es `t_preparacion`) en
+vez de `campos[9]` (`t_aco`). Por eso `costo_m_n200000_3reps.csv` quedó con
+tiempos de preparación (~0,05 s) en vez de tiempos de ACO, para las tres
+`m`. Se corrigió el índice en el script y se borró el CSV incorrecto (no se
+había commiteado). Punto 5 (la corrida real) no se vio afectado, porque mide
+sus tiempos con `Get-Date` directamente, no parseando el CSV. Se vuelve a
+correr el punto 1 (barato, ~8 min) después de que terminen los puntos 5 y 6,
+sin relanzar nada de lo que ya corrió bien.

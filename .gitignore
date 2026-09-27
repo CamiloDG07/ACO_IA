@@ -25,3 +25,5 @@ informe/*.synctex.gz
 # tours grandes y temporales
 *.tour
 *.tmp
+resultados/log_*.txt
+docs/_*

@@ -1,0 +1,22 @@
+\begin{table}[H]
+\centering
+\caption{Estrategias de ahorro de tiempo y memoria (detalle en \texttt{docs/estrategias\_ahorro.md}).}
+\label{tab:estrategias}
+\footnotesize
+\begin{tabular}{p{3.1cm}p{1.6cm}p{1.6cm}p{1.6cm}p{5.4cm}}
+\toprule
+\textbf{Estrategia} & \textbf{Recurso} & \textbf{Antes} & \textbf{Después} & \textbf{Medición} \\
+\midrule
+Sin matriz $n\times n$; lista de $K$ vecinas & Memoria & $O(n^2)$ & $O(nK)$ & 320 GB (densa) contra 96,8 MB medidos (dispersa), $n=200\,000$ \\
+Vecinas por rejilla espacial & Tiempo de preparación & $O(n^2)$ & $O(nK)$ & Preparación: 0,149 s, $n=200\,000$ \\
+Renumeración por celda & Tiempo (caché) & Acceso disperso & Acceso contiguo & Decisión de diseño, sin comparación aislada \\
+Búsqueda de reserva por anillos & Tiempo y memoria & Ordenar no visitadas & Solo si hace falta & Costo mayor al final del tour (ver complejidad) \\
+Hormigas sin guardar su tour; buffer por hilo & Memoria & $O(mn)$ & $O(n)$ por hilo & $\sim$16 GB evitados con $m=20\,000$, $n=200\,000$ \\
+Pesos precalculados por iteración & Tiempo & Recalcular por paso & Una vez por iteración & Cada paso: suma y ruleta de $K$ términos \\
+$\eta^\beta$ precalculado & Tiempo & Recalcular por iteración & Una vez al inicio & La distancia no cambia \\
+Paralelismo por hormiga (OpenMP) & Tiempo & Secuencial & Hasta 12 hilos & Ver aceleración y eficiencia (sección~\ref{sec:tiempo-memoria}) \\
+\texttt{float} y arreglos contiguos & Memoria y caché & \texttt{double} & \texttt{float} & Verificación en \texttt{double} coincide en todas las corridas \\
+Segunda feromona solo en aristas candidatas & Memoria & $O(n^2)$ si fuera densa & $O(nK)$ & Mismo argumento que la primera fila \\
+\bottomrule
+\end{tabular}
+\end{table}

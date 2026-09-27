@@ -50,6 +50,70 @@ breve y teórica, no empírica.
   seguros y plantillas sin ganar nada a cambio; reescribir en Rust exigiría
   reescribir desde cero un algoritmo ya probado, sin que el enunciado lo pida.
 
+### Comparación cualitativa con C, Rust y otras alternativas
+
+Comparación **cualitativa**, sin medir ningún otro lenguaje. Se espera que
+las diferencias de rendimiento entre C, C++ y Rust en este problema sean
+pequeñas (pocos puntos porcentuales), porque el tiempo lo dominan los
+accesos irregulares a memoria, el número de hilos y el algoritmo, no el
+lenguaje — es una expectativa razonada, no un resultado medido aquí.
+
+| Criterio | C++ | Rust | C |
+| --- | --- | --- | --- |
+| Velocidad final | Equivalente a C | Equivalente | Equivalente (base de comparación) |
+| Paralelismo | OpenMP, una directiva por bucle | `rayon`, expresivo pero otro ecosistema | OpenMP, más código manual |
+| Estructuras de datos | Vectores, atómicos, ordenación en la STL | Vectores, atómicos, ordenación en su librería estándar | A mano (arreglos y punteros) |
+| Seguridad de memoria | Depende del programador | Garantizada por el compilador (*borrow checker*) | Depende del programador |
+| Instalación en Windows | Un paquete (`g++`, aquí WinLibs) | `rustup` + enlazador (a veces exige VS) | Un paquete (`gcc`) |
+| Curva de aprendizaje/depuración | Conocida, depuradores maduros | Más empinada (propiedad y préstamos) | Similar a C++, menos abstracciones |
+
+Otras alternativas descartadas y por qué: Zig (tan rápido como C, pero joven
+y con poca documentación); Go (paralelismo sencillo, pero su recolector de
+basura lo deja por debajo en cálculo intensivo); Julia (cercano a C++ en
+cálculo científico, pero con arranque de compilación notable y más memoria
+en tiempo de ejecución); Java/C# (buen rendimiento tras el calentamiento de
+la VM, pero más memoria y menos control, justo lo que se quiere ahorrar);
+Fortran (excelente con matrices densas, poco natural para grafos, listas de
+vecinas y rejillas espaciales); Python con Numba o Cython (el código de alto
+nivel sigue en Python, y el docente ya advirtió que Python puede no
+alcanzar; habría que aclarar además qué parte corre realmente compilada).
+
+Conclusión: se elige C++ por tres razones prácticas (OpenMP casi sin código
+adicional, compilador de instalación sencilla en Windows, código base ya
+validado con pruebas), reconociendo que Rust habría sido igual de válido si
+el criterio principal hubiera sido la seguridad de memoria, y que C habría
+sido igual de rápido con más código para lo mismo que la STL de C++ da de
+fábrica.
+
+## Configuración elegida para las corridas grandes (n = 2 000 y n = 200 000)
+
+La configuración de partida era K=8, alpha=1.5, beta=5, rho=0.1, qfac=3 (sin
+segunda feromona), tomada de la nota preliminar del enunciado. El barrido de
+parámetros (`resultados/barrido_parametros.csv`, 5 semillas por valor,
+Fase 2) sugería, valor por valor, que alpha=2, beta=8, rho=0.5, qfac=10 y
+K=5 daban mejores medias individuales que la configuración de partida. Antes
+de adoptar esa combinación se comparó de forma directa y apareada (mismas 8
+semillas, prueba de Wilcoxon, `scripts/seleccion_configuracion.py`):
+
+| Configuración | Media L | Desv. estándar | Diferencia vs. referencia | p (Wilcoxon) |
+| --- | ---: | ---: | ---: | ---: |
+| Referencia (K=8, alpha=1.5, beta=5, rho=0.1, qfac=3) | 37,940 | 0,225 | — | — |
+| Mejores valores individuales (K=5, alpha=2.0, beta=8, rho=0.5, qfac=10) | 38,154 | 0,420 | +0,214 (peor) | 0,055 (no significativo) |
+| Referencia + segunda feromona (two=1, alpha2=1.0) | 37,496 | 0,352 | −0,444 (mejor) | 0,0078 (significativo) |
+
+Combinar los mejores valores individuales de cada parámetro **no** dio la
+mejor combinación conjunta (quedó, de hecho, ligeramente peor que la
+referencia, aunque sin diferencia significativa): evidencia de que los
+parámetros interactúan entre sí y que optimizarlos uno por uno, con los
+demás fijos en un valor por defecto distinto al de la referencia, no es
+intercambiable con optimizar la combinación completa.
+
+**Se adopta la configuración con segunda feromona** (K=8, alpha=1.5, beta=5,
+rho=0.1, qfac=3, two=1, alpha2=1.0, que cumple alpha2 < alpha) para el
+resultado oficial de n=2 000 y para las corridas de n=200 000, por ser la
+única candidata con una mejora estadísticamente significativa y de magnitud
+apreciable (≈1,2 % más corta) sobre la referencia.
+
 ## Número de agentes (m)
 
 Regla adoptada: **m = min(n, 20 000)**. Es decir, n = 20 con m = 20; n = 2 000

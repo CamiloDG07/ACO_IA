@@ -1,0 +1,5 @@
+Referencia: media=37.9399 std=0.2253 (n=8 semillas)
+candidata_a_individuales: media=38.1541 std=0.4200 diff_vs_ref=+0.2142 wilcoxon_p=0.0547 (sin diferencia significativa o peor)
+candidata_b_segunda_feromona: media=37.4959 std=0.3522 diff_vs_ref=-0.4440 wilcoxon_p=0.0078 (mejor, p<0.05)
+
+Veredicto: configuracion elegida para las corridas grandes = candidata_b_segunda_feromona
