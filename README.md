@@ -87,5 +87,13 @@ cd informe && latexmk -pdf informe.tex          # compila informe.pdf
 
 ## Resumen de resultados
 
-*(pendiente: se completa en `docs/RESUMEN_FINAL.md` al cerrar el proyecto,
-con enlaces a las tablas y figuras definitivas)*
+| Instancia | Resultado |
+| --- | --- |
+| n = 20 | 4 de 5 semillas alcanzan el óptimo exacto (Held-Karp); la quinta queda a 1,18 % |
+| n = 2 000 | Longitud media 37,50 (8 semillas), configuración con segunda feromona, mejora estadísticamente significativa (p=0,0078) sobre la configuración de referencia |
+| n = 200 000, m = 20 000 (10 iteraciones) | Mejora media del 1,28 % sobre el vecino más cercano, ~14 min por semilla |
+| n = 200 000, m = 2 048 (igual presupuesto, ~108 iteraciones) | Mejora media del 1,75 % sobre el vecino más cercano — **mejor** que m=20 000 en las 3 semillas probadas |
+| Memoria, n = 200 000 | ~102 MB medidos (dispersa) contra 320 GB que exigiría la versión densa |
+
+Ver `docs/resultados.md` y `docs/RESUMEN_FINAL.md` para el detalle completo,
+y `informe/informe.pdf` para el análisis.

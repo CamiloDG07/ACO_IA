@@ -21,19 +21,27 @@ Máquina: Intel Core i7-8750H, 6 núcleos / 12 hilos, 15,88 GB de RAM
 
 | Medición | Valor |
 | --- | --- |
-| Tiempo por hormiga (efectivo, ya paralelo, 12 hilos) | ~7,36 ms |
-| Tiempo por iteración, `m = 2 048` | ~15 s (medido en la Fase 1); ~8,5 s en una corrida posterior con la configuración final (ver nota¹) |
-| Tiempo por iteración, `m = 20 000` | *(pendiente: se completa con el punto 1 de `scripts/ejecutar_corridas_largas.ps1`, repetido 3 veces)* |
-| Corrida real, `n=200 000`, `m=20 000`, 10 iteraciones | *(pendiente: se completa al cerrar las corridas largas; ver `docs/resultados.md`)* |
-| Extrapolación a una iteración con `m = n = 200 000` | ~24,3–24,5 minutos (dos métodos independientes de estimación; **extrapolación, no corrida real**, ver `docs/decisiones_diseno.md`) |
-| Memoria pico medida, `n = 200 000`, versión dispersa | ~97 MB (`m=2 048`) |
+| Tiempo por hormiga (efectivo, ya paralelo, 12 hilos, config. ganadora) | ~4,3 ms |
+| Tiempo por iteración, `m = 2 048` | ~8,7 s medido directamente (3 repeticiones, `resultados/costo_m_n200000_3reps.csv`) |
+| Tiempo por iteración, `m = 20 000` | ~86,9 s medido directamente (3 repeticiones) |
+| Corrida real, `n=200 000`, `m=20 000`, 10 iteraciones, 3 semillas | 13,8 a 14,2 minutos por semilla (`docs/bitacora.md`); mejora media del 1,28 % sobre el vecino más cercano |
+| Igual presupuesto (~15 min/semilla), `m=2 048`, ~108 iteraciones | mejora media del 1,75 % sobre el vecino más cercano — **mejor** que `m=20 000` con 10 iteraciones, en las 3 semillas (ver `docs/decisiones_diseno.md`) |
+| Extrapolación a una iteración con `m = n = 200 000` | ~14,5 minutos (ajuste lineal, R²=1,000000; **extrapolación, no corrida real**, ver `docs/decisiones_diseno.md`) |
+| Memoria pico medida, `n = 200 000`, versión dispersa | ~102 MB (`m=2 048` o `m=20 000`: la memoria no depende de `m`, ver `docs/estrategias_ahorro.md`) |
 | Memoria que exigirían las matrices densas, `n = 200 000` | 320 GB (calculado, no ejecutado; `aco_denso.cpp` se niega a correr con `n > 5 000`) |
 
-¹ La variación entre 15 s y 8,5 s para la misma `m=2 048` corresponde a
-corridas medidas en momentos distintos del proyecto, con configuraciones de
-parámetros ligeramente distintas (`K`, si `two=1`, etc.); ambas son del
-mismo orden de magnitud y confirman que el tiempo por iteración con
-`m=2 048` es de segundos, no de minutos.
+Nota: una medición preliminar de la Fase 2 (una sola repetición, sin la
+segunda capa de feromona) había dado ~144,85 s para `m=20 000` y una
+extrapolación de ~24,3 min/iteración. La medición con 3 repeticiones y la
+configuración final (con segunda feromona) dio un tiempo por hormiga menor
+y consistente con la corrida real; ambas mediciones quedan documentadas en
+`docs/decisiones_diseno.md`, con la diferencia explicada, no oculta.
+
+Se revisó el tiempo por iteración de las 6 corridas del bloque de cierre
+(354 iteraciones en total, 348 pares consecutivos) buscando variaciones
+mayores al 15 % entre iteraciones consecutivas (señal de que el equipo se
+desacelera). No se encontró ninguna: el equipo se mantuvo estable durante
+toda la ejecución.
 
 ## Qué esperar en equipos con menos núcleos
 

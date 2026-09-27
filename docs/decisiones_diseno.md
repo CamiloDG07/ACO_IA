@@ -168,39 +168,52 @@ guardia en `aco_denso.cpp`) también hace que "m = n hormigas por iteración"
 sea, en tiempo, equivalente a reconstruir del orden de una matriz densa por
 iteración.
 
-Tiempo medido por iteración en esta máquina, n = 200 000, K = 8,
-alpha=1.5, beta=5, rho=0.1, qfac=3, semilla 1 (una sola iteración por punto,
-`resultados/costo_m_n200000.csv`):
+Tiempo medido por iteración en esta máquina, n = 200 000, K = 8, con la
+**configuración ganadora** (alpha=1.5, beta=5, rho=0.1, qfac=3, segunda
+feromona activada), 3 repeticiones por valor de m
+(`resultados/costo_m_n200000_3reps.csv`):
 
-| m | tiempo medido (s) | tiempo predicho por el ajuste (s) |
-| ---: | ---: | ---: |
-| 200 | 1.099 | 0.548 |
-| 2 000 | 13.056 | 13.662 |
-| 20 000 | 144.850 | 144.795 |
+| m | tiempo medio (s) | desv. estándar (s) | tiempo predicho por el ajuste (s) |
+| ---: | ---: | ---: | ---: |
+| 200 | 0,850 | 0,015 | 0,833 |
+| 2 000 | 8,681 | 0,066 | 8,679 |
+| 20 000 | 86,940 | 0,476 | 86,943 |
 
-Ajuste lineal (mínimos cuadrados, 3 puntos): `t(m) ≈ 0.007285 · m − 0.909`
-segundos, con **R² = 0.999947** (prácticamente lineal en m, como predice la
-teoría a n y K fijos). El intercepto negativo no tiene sentido físico (con
-m=0 no puede tomar tiempo negativo); es un artefacto de ajustar una recta a
-solo 3 puntos con un rango enorme de m, no una medición real en m pequeño.
+Ajuste lineal (mínimos cuadrados, 3 puntos × 3 repeticiones): `t(m) ≈
+0,004348 · m − 0,017` segundos, con **R² = 1,000000** (lineal en m dentro
+del margen de medición, como predice la teoría a n y K fijos).
 
 **Extrapolación a m = n = 200 000** (marcada explícitamente como estimación
-por extrapolación lineal, no como corrida real): `0.007285 × 200 000 − 0.909
-≈ 1 456 s ≈ 24,3 minutos por iteración`. Esta cifra coincide, dentro del
-margen esperado, con la estimación independiente de la Fase 1 (`~7,36
-ms/hormiga efectivos × 200 000 ≈ 1 472 s ≈ 24,5 min`), obtenida por un
-método distinto (tasa efectiva medida en una corrida de 5 iteraciones con
-m = 2 048), lo que da confianza en el orden de magnitud.
+por extrapolación lineal, no como corrida real): `0,004348 × 200 000 − 0,017
+≈ 870 s ≈ 14,5 minutos por iteración`.
+
+Nota sobre una medición anterior: una primera medición de un solo punto
+(Fase 2, sin repeticiones, con la configuración de partida **sin** segunda
+feromona) había dado ~144,85 s para m=20 000 y una extrapolación de ~24,3
+min/iteración (`resultados/costo_m_n200000.csv`, conservado sin modificar
+como registro histórico). La medición con 3 repeticiones y la configuración
+ganadora da un tiempo por hormiga menor (~86,9 s contra ~144,85 s para el
+mismo m=20 000): la diferencia es real, no un error de medición (se
+comprobó con 3 repeticiones consistentes entre sí, desv. estándar de 0,48 s
+sobre una media de 86,94 s), y es coherente con lo observado en la corrida
+real del punto 5 (bloque C, ~85 s/iteración medidos directamente, ver más
+abajo). La explicación más plausible es que la segunda feromona guía a las
+hormigas de forma más decisiva, reduciendo cuánto recurren a la búsqueda de
+reserva (la parte más cara de construir un paso, ver la sección de análisis
+de complejidad del informe); no se aisló esta hipótesis con
+un experimento dedicado, así que se reporta como explicación plausible, no
+como hecho verificado.
 
 ### (c) Por qué el tope de 20 000
 
 El tope no es una propiedad del algoritmo: es una decisión de presupuesto de
 cómputo medido en esta máquina (Fase 0: i7-8750H, 6 núcleos/12 hilos, 15,88
-GB RAM). Con m = n = 200 000, una sola iteración tomaría ~24,3 minutos
-(extrapolado); diez iteraciones tomarían más de 4 horas, y el enunciado pide
-además múltiples semillas. Con m = 20 000 (10 % de n), una iteración toma
-~2,4 minutos medidos directamente: diez iteraciones caben en unos 25
-minutos por semilla, un presupuesto compatible con el tiempo disponible para
+GB RAM). Con m = n = 200 000, una sola iteración tomaría ~14,5 minutos
+(extrapolado, ver (b)); diez iteraciones tomarían más de 2 horas por
+semilla, y el enunciado pide además múltiples semillas. Con m = 20 000
+(10 % de n), una iteración toma ~87 s medidos directamente: diez iteraciones
+tomaron, en la corrida real, entre 13,8 y 14,2 minutos por semilla (ver
+`docs/bitacora.md`), un presupuesto compatible con el tiempo disponible para
 el taller.
 
 Además, la feromona se actualiza **una sola vez por iteración**,
@@ -238,19 +251,39 @@ hormigas (2 a 10) ya da el mejor compromiso entre calidad y tiempo, y el
 beneficio de una población grande solo se nota en instancias más grandes.
 
 **Comparación a igual presupuesto de cómputo en n = 200 000** (m = 2 048
-contra m = 20 000, mismo tiempo de reloj, 3 semillas): **pendiente**. Esta
-corrida es de las que se lanzan al final, con confirmación previa del
-estudiante (ver `docs/bitacora.md`). Esta subsección se actualiza en cuanto
-esa corrida termine.
+contra m = 20 000, mismo tiempo de reloj, 3 semillas; corrida real,
+`resultados/resultado_n200000_punto5.csv` y `..._punto6.csv`, ver
+`docs/bitacora.md` para las horas de inicio y fin de cada semilla):
 
-**Conclusión (solo lo que los datos muestran hasta ahora):** con el número
-de iteraciones fijo, la calidad en n = 2 000 satura con fuerza a partir de
-m ≈ 1 000–2 000; subir a m = 20 000 cuesta mucho tiempo por muy poca mejora
-adicional. Esto sugiere que **el tope de 20 000 no está impulsado por una
-necesidad de calidad** (que ya satura mucho antes) **sino por el presupuesto
-de tiempo** disponible para correr varias iteraciones y semillas en
-n = 200 000 — pero esta conclusión se confirma o se corrige con la
-comparación a igual presupuesto de (d), todavía pendiente.
+| Configuración | Iteraciones hechas | Tiempo de reloj | L\_mejor media | Desv. estándar | Mejora vs. NN media |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| m = 20 000 (punto 5) | 10 | ~14 min/semilla | 387,308 | 0,190 | 1,28 % |
+| m = 2 048 (punto 6) | ~108 | 15 min/semilla | 385,485 | 0,550 | 1,75 % |
+
+Con el **mismo presupuesto de tiempo de reloj** (~15 minutos por semilla),
+`m = 2 048` completa unas 108 iteraciones y llega a una longitud media
+**menor** (mejor) que `m = 20 000` con solo 10 iteraciones: la diferencia
+por semilla (`punto6 - punto5`) es negativa en las **3 de 3** semillas
+(-2,29, -0,99 y -2,19), es decir, `m = 2 048` gana en todas las semillas.
+Con solo 3 semillas la prueba de Wilcoxon no alcanza significancia
+convencional (p = 0,25, el mínimo posible con n = 3 pares), pero la
+dirección del efecto es completamente consistente, no mixta.
+
+**Conclusión (lo que los datos muestran, incluida la comparación a igual
+presupuesto):** ni la calidad contra $m$ en n = 2 000 (que ya satura mucho
+antes de m = 20 000) ni la comparación directa a igual tiempo en
+n = 200 000 respaldan que `m = 20 000` sea la forma más eficiente de gastar
+un presupuesto de tiempo fijo. Al contrario: con el mismo tiempo de reloj,
+correr más iteraciones con menos hormigas (`m = 2 048`) dio una calidad
+ligeramente mejor que correr pocas iteraciones con muchas hormigas
+(`m = 20 000`), en las tres semillas probadas. Esto no invalida usar
+`m = 20 000` para la corrida "oficial" de 10 iteraciones de este trabajo
+(que sigue la convención `m = min(n, 20 000)` de la literatura y el
+presupuesto de tiempo total del proyecto), pero sí deja claro que el tope
+de 20 000 se sostiene por la convención de la literatura y el presupuesto
+de tiempo **total** disponible para el taller, no porque más hormigas por
+iteración sea, en esta máquina, la forma más eficiente de convertir tiempo
+de cómputo en calidad de tour.
 
 ### (e) 20 000 es una decisión de ingeniería, no un óptimo teórico
 

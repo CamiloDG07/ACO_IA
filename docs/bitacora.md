@@ -248,3 +248,51 @@ pero se saca del control de versiones (`git rm --cached`, y se agrega a
 corrigió también la única mención indirecta que quedaba en esta bitácora
 (el nombre de archivo del plan base), sin alterar el relato de lo que
 efectivamente se hizo.
+Punto 5, semilla 2: inicio 05:00:21, fin 05:14:30, duracion 14.2 min
+Punto 5, semilla 3: inicio 05:14:30, fin 05:28:20, duracion 13.8 min
+Punto 6, semilla 1: inicio 05:28:20, fin 05:43:21, duracion 15 min
+Punto 6, semilla 2: inicio 05:43:21, fin 05:58:29, duracion 15.1 min
+Punto 6, semilla 3: inicio 05:58:29, fin 06:13:34, duracion 15.1 min
+### Corridas largas: fin 2026-09-27 06:13:34, duracion total 92 min
+
+### Corridas largas: inicio 2026-09-27 06:14:22
+Punto 1 (costo por iteracion, 3 repeticiones) terminado: 2026-09-27 06:19:13
+### Corridas largas: fin 2026-09-27 06:19:13, duracion total 4.8 min
+
+**Verificación de estabilidad del equipo (regla 3 del modo autónomo):** se
+revisó el tiempo por iteración de las 6 corridas del bloque C (3 semillas
+del punto 5, 10 iteraciones cada una; 3 semillas del punto 6, ~108
+iteraciones cada una) buscando variaciones mayores al 15 % entre
+iteraciones consecutivas (señal de que el equipo se desacelera, por
+ejemplo por límite térmico). **No se encontró ninguna** en 348 pares de
+iteraciones consecutivas revisados (354 iteraciones en total); el tiempo
+por iteración se mantuvo estable durante toda la corrida.
+
+**Punto 1 recalculado correctamente** (`resultados/costo_m_n200000_3reps.csv`,
+3 repeticiones, configuración ganadora): 0,850 s (m=200), 8,681 s (m=2 000),
+86,940 s (m=20 000). Ajuste lineal `t(m) ≈ 0,004348·m − 0,017` s,
+**R²=1,000000**. Extrapolación a m=n=200 000: ≈870 s ≈ 14,5 minutos por
+iteración — notablemente menor que la estimación anterior de la Fase 2
+(~24,3 min, con la configuración sin segunda feromona y una sola repetición
+por punto). La diferencia es consistente con lo medido directamente en la
+corrida real del punto 5 (~85 s/iteración con m=20 000, contra ~144,85 s de
+la medición anterior): se documenta la discrepancia entre ambas
+mediciones en `docs/decisiones_diseno.md` en vez de ocultarla o promediarla
+sin explicación.
+
+**Resultado clave de la comparación a igual presupuesto de cómputo**
+(punto 6 vs. punto 5, n=200 000, ~15 min de reloj por semilla): `m=2 048`
+(~108 iteraciones) dio una longitud media menor (mejor) que `m=20 000` (10
+iteraciones) en las **3 de 3** semillas (diferencia siempre negativa:
+-2,29, -0,99, -2,19). Con solo 3 semillas la prueba de Wilcoxon no alcanza
+significancia convencional (p=0,25, el mínimo posible con n=3), pero la
+dirección es unánime. Se actualizaron `docs/decisiones_diseno.md`,
+`informe/informe.tex`, `docs/resultados.md` y `docs/guia_exposicion.md` con
+este hallazgo, incluida la interpretación honesta de sus límites (no
+invalida la convención m=n de la literatura en general, sí muestra que en
+esta máquina y con este presupuesto no fue la forma más eficiente de gastar
+el tiempo disponible).
+
+**Bloque D en curso:** `scripts/experimentos_fase3_figuras.py` (mapas de
+calor alpha-beta y rho-qfac, aceleración por hilos) lanzado después de
+confirmar que no quedaba ningún proceso de ACO activo del bloque C.

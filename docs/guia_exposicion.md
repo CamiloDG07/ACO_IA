@@ -73,10 +73,20 @@ dominancia en vez de por un solo número.
 
 ### ¿Para qué sirven 200 000 hormigas?
 
-*(se completa con los datos de la comparación a igual presupuesto de
-cómputo en n = 200 000: m = 2 048 contra m = 20 000, mismo tiempo de reloj,
-ver `docs/decisiones_diseno.md` y `docs/resultados.md` una vez cerradas las
-corridas largas)*
+Menos de lo que la convención de la literatura sugiere, al menos en esta
+máquina. Se comparó, a igual tiempo de reloj (~15 minutos por semilla, 3
+semillas) en n = 200 000: `m = 20 000` alcanza a correr 10 iteraciones
+(mejora media del 1,28 % sobre el vecino más cercano); `m = 2 048` alcanza a
+correr unas 108 iteraciones en el mismo tiempo (mejora media del 1,75 %).
+`m = 2 048` ganó en las 3 de 3 semillas (aunque con solo 3 semillas la
+prueba de Wilcoxon no llega a significancia convencional, p=0,25). Es decir:
+con un presupuesto de tiempo fijo, más iteraciones con menos hormigas dio
+mejor resultado que menos iteraciones con muchas hormigas. 200 000 hormigas
+sirven, sobre todo, para cumplir la recomendación del docente y la
+convención de la literatura del Ant System (m = n), no porque esta máquina
+haya demostrado que sea la forma más eficiente de gastar el tiempo
+disponible. Ver `docs/decisiones_diseno.md`, sección "Número de agentes",
+inciso (d).
 
 ### ¿Habría sido más rápido usar C, Rust u otro lenguaje?
 

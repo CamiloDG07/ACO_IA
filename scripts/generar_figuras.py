@@ -191,11 +191,11 @@ def fig_tiempo_vs_m():
         "\\label{tab:costo_m}\n"
         "\\begin{tabular}{rrr}\\toprule\n"
         "$m$ & Tiempo medio (s) & Desv. estándar (s) \\\\\\midrule\n"
-        + "\n".join(f"{int(r.m)} & {_fmt(r['mean'])} & {_fmt(r['std'])} \\\\" for r in g.itertuples()) +
+        + "\n".join(f"{int(r.m)} & {_fmt(r.mean)} & {_fmt(r.std)} \\\\" for r in g.itertuples()) +
         f"\n\\bottomrule\\end{{tabular}}\\\\[0.3em]\n"
-        f"\\footnotesize Ajuste: $t(m)\\approx {a:.6f}\\,m {'+' if b>=0 else '-'} {abs(b):.3f}$ s, "
-        f"$R^2={r2:.6f}$. Extrapolación a $m=n=200\\,000$: {t_ext:.1f} s "
-        f"($\\approx${t_ext/60:.1f} min), \\textbf{{estimación por extrapolación, no corrida real}}.\n"
+        f"\\footnotesize Ajuste: $t(m)\\approx {_fmt(a, 6)}\\,m {'+' if b>=0 else '-'} {_fmt(abs(b), 3)}$ s, "
+        f"$R^2={_fmt(r2, 6)}$. Extrapolación a $m=n=200\\,000$: {_fmt(t_ext, 1)} s "
+        f"($\\approx${_fmt(t_ext/60, 1)} min), \\textbf{{estimación por extrapolación, no corrida real}}.\n"
         "\\end{table}\n"
     )
     _guardar_tabla("costo_m_n200000.tex", tabla)
@@ -309,6 +309,29 @@ def fig_aceleracion_hilos():
     ax1.legend(lines1 + lines2, labels1 + labels2, fontsize=8, loc="upper left")
     ax1.set_title("Aceleración y eficiencia vs. número de hilos (n=2\\,000)".replace("\\,", " "))
     _guardar_fig(fig, "07_aceleracion_hilos.png")
+
+
+# ---------------------------------------------------------------- Figura 6b: tiempo vs n (escalamiento)
+def fig_tiempo_vs_n():
+    disp = pd.read_csv(_ruta_r("escalamiento_disperso.csv"))
+    dens = pd.read_csv(_ruta_r("escalamiento_denso.csv"))
+    gd = disp.groupby("n_meta")["t_aco"].mean().reset_index()
+    ge = dens.groupby("n_meta")["t_aco"].mean().reset_index()
+    # tiempo por iteracion (los CSV traen tiempo total de las iteraciones corridas)
+    iters_disp = disp.groupby("n_meta")["iters"].mean()
+    iters_dens = dens.groupby("n_meta")["iters"].mean()
+    gd["t_iter"] = gd["t_aco"] / gd["n_meta"].map(iters_disp)
+    ge["t_iter"] = ge["t_aco"] / ge["n_meta"].map(iters_dens)
+
+    fig, ax = plt.subplots(figsize=(6, 4))
+    ax.plot(gd["n_meta"], gd["t_iter"], "o-", color=PALETA[0], label="dispersa (medida)")
+    ax.plot(ge["n_meta"], ge["t_iter"], "s-", color=PALETA[1], label="densa (medida, n≤5\\,000)".replace("\\,", " "))
+    ax.set_xscale("log"); ax.set_yscale("log")
+    ax.set_xlabel("n (ciudades)")
+    ax.set_ylabel("Tiempo por iteración (s)")
+    ax.set_title("Tiempo por iteración vs. n, m=2\\,048 fijo".replace("\\,", " "))
+    ax.legend(fontsize=8)
+    _guardar_fig(fig, "06b_tiempo_vs_n.png")
 
 
 # ---------------------------------------------------------------- Figura 8: memoria densa vs dispersa
@@ -433,6 +456,7 @@ FUNCIONES = {
     "tabla_n2000": tabla_resultados_n2000,
     "boxplots": fig_boxplots_configuracion,
     "tiempo_vs_m": fig_tiempo_vs_m,
+    "tiempo_vs_n": fig_tiempo_vs_n,
     "convergencia": fig_convergencia,
     "heatmaps": fig_heatmaps,
     "efecto_k_segunda_feromona": fig_efecto_k_y_segunda_feromona,

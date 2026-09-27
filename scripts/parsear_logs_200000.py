@@ -16,7 +16,7 @@ PATRON_ITER = re.compile(
     r"^\s*(\d+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)\s*$")
 PATRON_RESUMEN = re.compile(
     r"^n=(\d+) m=(\d+) iters=(\d+) tour_valido=(\w+) L_mejor=([\d.]+) "
-    r"\(verificado ([\d.]+)\) L_nn=([\d.]+) mejora_vs_nn=(-?[\d.]+)%")
+    r"\(verificado ([\d.]+)\) L_nn=([\d.]+) mejora_vs_nn=(-?[\d.]+)%", re.MULTILINE)
 PATRON_MEM = re.compile(r"pico RSS=([\d.]+) MB")
 
 

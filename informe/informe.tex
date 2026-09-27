@@ -323,36 +323,68 @@ artículos originales por no haberlos verificado directamente.
 
 \paragraph{Costo y extrapolación.} Con lista de candidatos de tamaño $K$,
 una iteración cuesta $O(m n K)$; con $m=n$ pasa a $O(n^2 K)$. El tiempo
-medido en esta máquina para una iteración en $n=200\,000$, $K=8$
-(\texttt{resultados/costo\_m\_n200000.csv}) fue de 1,099~s ($m=200$),
-13,056~s ($m=2\,000$) y 144,850~s ($m=20\,000$). El ajuste lineal por
-mínimos cuadrados da $t(m) \approx 0{,}007285\,m - 0{,}909$ segundos, con
-$R^2 = 0{,}999947$. \textbf{Como estimación por extrapolación lineal, no
-como corrida real}, una iteración con $m=n=200\,000$ tomaría
-${\approx}1\,456$ s (${\approx}24{,}3$ min), cifra consistente con la
-estimación independiente de la Fase~1 (${\approx}24{,}5$ min).
+medido en esta máquina para una iteración en $n=200\,000$, $K=8$, con la
+configuración ganadora (3 repeticiones cada una,
+\texttt{resultados/costo\_m\_n200000\_3reps.csv})
+fue de 0,850~s ($m=200$), 8,681~s ($m=2\,000$) y 86,940~s ($m=20\,000$). El
+ajuste lineal por mínimos cuadrados da $t(m) \approx 0{,}004348\,m -
+0{,}017$ segundos, con $R^2 = 1{,}000000$. \textbf{Como estimación por
+extrapolación lineal, no como corrida real}, una iteración con
+$m=n=200\,000$ tomaría ${\approx}870$ s (${\approx}14{,}5$ min). Una
+medición anterior de un solo punto (Fase~2, configuración sin segunda
+feromona) había dado ${\approx}144{,}85$ s para $m=20\,000$ y una
+extrapolación de ${\approx}24{,}3$ min; la medición con la configuración
+ganadora y 3 repeticiones da un tiempo por hormiga menor, consistente con lo
+observado directamente en la corrida real del punto 5 (${\approx}85$
+s/iteración medidos, ver la tabla siguiente): una explicación plausible,
+no verificada con un experimento dedicado, es que la segunda feromona guía
+a las hormigas de forma más decisiva y reduce cuánto recurren a la búsqueda
+de reserva (la parte más cara de un paso de construcción).
 
 \paragraph{Por qué el tope de 20 000.} Es una decisión de presupuesto de
 cómputo de esta máquina (Fase~0), no una propiedad del algoritmo: diez
-iteraciones con $m=n=200\,000$ tomarían más de 4 horas (extrapolado),
-mientras que con $m=20\,000$ toman del orden de 25 minutos por semilla,
-medido directamente. Además, la feromona se actualiza una sola vez por
-iteración sin importar cuántas hormigas corrieron, así que agregar hormigas
-no agrega actualizaciones de feromona, solo muestras adicionales antes de
-esa única actualización.
+iteraciones con $m=n=200\,000$ tomarían más de 2 horas por semilla
+(extrapolado), mientras que con $m=20\,000$ tomaron, en la corrida real,
+entre 13,8 y 14,2 minutos por semilla (medido directamente,
+\texttt{docs/bitacora.md}). Además, la feromona se actualiza una sola vez
+por iteración sin importar cuántas hormigas corrieron, así que agregar
+hormigas no agrega actualizaciones de feromona, solo muestras adicionales
+antes de esa única actualización.
 
 \paragraph{Respaldo empírico.} La calidad contra $m$ en $n=2\,000$ (50
 iteraciones fijas, 5 semillas, \texttt{resultados/barrido\_m.csv}) muestra
 rendimientos decrecientes marcados: de $m=10$ a $m=20\,000$ (2\,000 veces
 más hormigas) la longitud media mejora solo 2,4\,\% (39,84 a 38,89), con un
-costo de cómputo casi 1\,080 veces mayor. La comparación a igual presupuesto
-de cómputo en $n=200\,000$ ($m=2\,048$ contra $m=20\,000$, mismo tiempo de
-reloj) queda \textbf{pendiente} de ejecutarse (corrida larga, con
-confirmación previa del estudiante); esta sección se actualiza cuando esa
-corrida cierre. Con los datos disponibles hasta ahora, la saturación de
-calidad con el número de iteraciones fijo sugiere que el tope de 20\,000 no
-responde a una necesidad de calidad, sino al presupuesto de tiempo — pero
-esa conclusión se confirma o se corrige con la comparación pendiente.
+costo de cómputo casi 1\,080 veces mayor.
+
+La comparación a igual presupuesto de cómputo en $n=200\,000$ ($m=2\,048$
+contra $m=20\,000$, ~15 minutos de reloj por semilla, 3 semillas;
+\texttt{resultados/resultado\_n200000\_punto5.csv} y
+\texttt{..\_punto6.csv}) sí se completó:
+
+\begin{table}[H]\centering
+\caption{Igual presupuesto de tiempo en n=200\,000: m=20\,000 (10 iteraciones) contra m=2\,048 (\textasciitilde108 iteraciones).}
+\label{tab:igual_presupuesto}
+\begin{tabular}{lrrrr}\toprule
+Configuración & Iteraciones & $L_{mejor}$ media & Desv. estándar & Mejora vs. NN \\\midrule
+$m=20\,000$ & 10 & 387,308 & 0,190 & 1,28\,\% \\
+$m=2\,048$ & $\approx$108 & 385,485 & 0,550 & 1,75\,\% \\
+\bottomrule\end{tabular}
+\end{table}
+
+Con el \textbf{mismo tiempo de reloj}, $m=2\,048$ (muchas más iteraciones,
+pocas hormigas por iteración) dio una longitud media \textbf{menor} que
+$m=20\,000$ (pocas iteraciones, muchas hormigas), y ganó en las
+\textbf{3 de 3} semillas (diferencia por semilla siempre negativa: $-2{,}29$,
+$-0{,}99$, $-2{,}19$). Con solo 3 semillas la prueba de Wilcoxon no alcanza
+significancia convencional ($p=0{,}25$, el mínimo posible con $n=3$ pares),
+pero la dirección del efecto es completamente consistente. Ni la saturación
+de calidad contra $m$ en $n=2\,000$, ni esta comparación directa en
+$n=200\,000$, respaldan que $m=20\,000$ sea la forma más eficiente de gastar
+un presupuesto de tiempo fijo en esta máquina: el tope adoptado se sostiene
+por la convención de la literatura y por el presupuesto de tiempo
+\emph{total} del proyecto, no porque los datos muestren una ventaja de
+calidad de usar más hormigas por iteración.
 
 \paragraph{Aclaración.} 20\,000 es una decisión de ingeniería para esta
 máquina y este equipo, no un óptimo teórico. Dorigo y Stützle (2004, p.~217,
@@ -560,10 +592,23 @@ información más fina, y la mejora se reparte en más iteraciones antes de
 aplanarse.
 
 \subsection{n = 200 000}
-\emph{Pendiente: se completa con la corrida real de $m=20\,000$ (10
-iteraciones, hasta 3 semillas) al cerrar el bloque C. Ver
-\texttt{docs/bitacora.md} para el registro cronológico y
-\texttt{docs/resultados.md} para la tabla definitiva.}
+Configuración ganadora, 3 semillas, dos corridas con el mismo presupuesto de
+tiempo de reloj (\textasciitilde15 min/semilla) pero distinto número de
+hormigas (detalle y análisis en la sección~\ref{sec:tiempo-memoria} y en
+\texttt{docs/decisiones\_diseno.md}):
+\begin{itemize}
+\item $m=20\,000$ (recomendación de la literatura, 10 iteraciones):
+$L_{mejor}$ media 387,308 (desv. 0,190), mejora media del 1,28\,\% sobre el
+vecino más cercano, pico de memoria 102,4 MB.
+\item $m=2\,048$ (igual presupuesto de tiempo, $\approx$108 iteraciones):
+$L_{mejor}$ media 385,485 (desv. 0,550), mejora media del 1,75\,\% sobre el
+vecino más cercano, pico de memoria 102,4 MB.
+\end{itemize}
+Los cinco tours de ambas corridas se verificaron como permutaciones válidas.
+El hallazgo más relevante de esta instancia no es la calidad absoluta (ambas
+configuraciones quedan lejos del óptimo, esperable con tan pocas
+iteraciones sobre 200\,000 ciudades) sino la comparación entre ellas: ver
+sección~\ref{sec:tiempo-memoria}.
 
 % ====================================================================
 \section{Análisis de tiempo y memoria}
@@ -648,13 +693,47 @@ puntos uniformes sin borde, mientras que el cuadrado unidad sí tiene borde
 $n=20$, la comparación relevante es Held-Karp (óptimo exacto), no BHH (que
 solo es significativo para $n$ grande).
 
-\subsection{Costo de $m$, escalamiento, aceleración e igual presupuesto de cómputo}
-\emph{Pendiente: se completa con \texttt{scripts/ejecutar\_corridas\_largas.ps1}
-(costo de $m$ en $n=200\,000$, corrida real y comparación a igual
-presupuesto) y \texttt{scripts/experimentos\_fase3\_figuras.py} (aceleración
-por hilos), ambos al cerrar el bloque C. La derivación teórica ya está en la
-sección~\ref{sec:complejidad}; aquí falta la comprobación empírica de esa
-parte específica.}
+\subsection{Costo de $m$ y escalamiento con $n$}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.7\textwidth]{06_tiempo_vs_m_n200000.png}
+\caption{Tiempo de una iteración vs. m, n=200\,000, K=8, con ajuste lineal y extrapolación.}
+\label{fig:tiempo-vs-m}
+\end{figure}
+\input{tablas/costo_m_n200000.tex}
+\textbf{Cómo leer esta figura:} los tres puntos medidos (con barras de error
+de 3 repeticiones) caen casi exactamente sobre la recta ajustada
+($R^2=1{,}000000$), confirmando que el costo de una iteración es lineal en
+$m$ a $n$ y $K$ fijos, tal como predice la derivación $O(mnK)$
+(sección~\ref{sec:complejidad}). La estrella marca la extrapolación a
+$m=n=200\,000$: está fuera del rango medido, por eso se marca explícitamente
+como estimación y no como dato.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.7\textwidth]{06b_tiempo_vs_n.png}
+\caption{Tiempo por iteración vs. n, m=2\,048 fijo, dispersa vs. densa, log-log.}
+\label{fig:tiempo-vs-n}
+\end{figure}
+\textbf{Cómo leer esta figura:} en escala log-log, una relación de potencia
+$t \propto n^p$ se ve como una línea recta de pendiente $p$. La versión
+densa crece más rápido (mayor pendiente, consistente con $O(n^2)$ en tiempo
+más el costo de construir la matriz) que la dispersa ($O(nK)$, pendiente
+cercana a 1). Esta es la comprobación empírica, en tiempo, del mismo
+argumento que la Figura~\ref{fig:memoria-densa-dispersa} hace en memoria.
+
+\subsection{Igual presupuesto de cómputo en n = 200 000}
+Ver la tabla~\ref{tab:igual_presupuesto} y la discusión de la
+sección~\ref{sec:numero-agentes}, párrafo "Respaldo empírico": con el mismo
+tiempo de reloj, $m=2\,048$ (más iteraciones) superó a $m=20\,000$ (menos
+iteraciones) en las tres semillas probadas.
+
+\subsection{Aceleración y eficiencia por número de hilos}
+\emph{Pendiente: se completa con
+\texttt{scripts/experimentos\_fase3\_figuras.py} (aceleración por hilos,
+1/2/4/6/12), que se ejecuta después de cerrado el bloque C para no
+contaminar sus mediciones de tiempo. La derivación teórica (ley de Amdahl)
+ya está en la sección~\ref{sec:complejidad}.}
 
 % ====================================================================
 \section{Discusión}
@@ -682,9 +761,24 @@ barrido conjunto (no de un factor a la vez) alrededor de la configuración
 con segunda feromona, en vez de seguir optimizando parámetros individuales
 de la capa principal.
 
-\emph{(Esta sección se completa con los hallazgos de la comparación a igual
-presupuesto de cómputo en $n=200\,000$, bloque C, incluida en el cierre del
-proyecto.)}
+La comparación a igual presupuesto de tiempo en $n=200\,000$ confirma esta
+lectura con un dato directo, no solo con una tendencia en $n=2\,000$: en las
+tres semillas probadas, correr $\approx$108 iteraciones con $m=2\,048$ dio
+una longitud menor que correr 10 iteraciones con $m=20\,000$ en el mismo
+tiempo de reloj. Con solo tres semillas la diferencia no alcanza
+significancia estadística convencional, pero la dirección es unánime.
+Interpretación honesta: esto \textbf{no} demuestra que $m=20\,000$ sea una
+mala elección en general, ni que la convención $m=n$ de la literatura esté
+equivocada (esa convención se pensó para el Ant System sin lista de
+candidatos y sin el tipo de restricción de tiempo de un taller universitario);
+lo que sí muestra es que, \textbf{en esta máquina, con esta implementación y
+este presupuesto de tiempo}, invertir el tiempo disponible en más
+iteraciones (con pocas hormigas) rindió mejor que invertirlo en más
+hormigas por iteración (con pocas iteraciones). Es exactamente el tipo de
+hallazgo empírico que este trabajo se propuso obtener: no asumir la
+recomendación de la literatura ni descartarla de entrada, sino medirla en
+las condiciones reales del equipo y reportar lo que los datos muestran, sea
+o no la respuesta esperada.
 
 % ====================================================================
 \section{Limitaciones}
@@ -740,7 +834,12 @@ no por separado.
 respaldo teórico verificado (sección~\ref{sec:numero-agentes}), pero en la
 práctica de este equipo, con esta máquina y este tiempo disponible, no es
 ejecutable para $n=200\,000$; el tope adoptado ($m=20\,000$) es una decisión
-de ingeniería explícita, no una regla universal.
+de ingeniería explícita, no una regla universal. La comparación directa a
+igual presupuesto de tiempo en $n=200\,000$ (sección~\ref{sec:tiempo-memoria})
+incluso sugiere lo contrario de la intuición de "más hormigas es mejor":
+con el mismo tiempo de reloj, más iteraciones con menos hormigas
+($m=2\,048$) dieron mejor calidad que menos iteraciones con más hormigas
+($m=20\,000$), en las tres semillas probadas.
 \item Optimizar cada parámetro por separado no equivale a optimizar la
 combinación conjunta: el barrido de un factor a la vez identificó una
 mejora real (la segunda capa de feromona), pero también un espejismo

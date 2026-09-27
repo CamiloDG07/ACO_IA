@@ -41,8 +41,22 @@ bloque C — y generadas las tablas automáticas en `informe/tablas/`.)*
 
 ## n = 200 000
 
-*(pendiente: se completa al cerrar el bloque C — corrida real con
-m=20 000, 10 iteraciones, hasta 3 semillas, y la comparación a igual
-presupuesto de cómputo contra m=2 048. Ver `docs/bitacora.md` para el
-registro cronológico de esas corridas y `docs/RESUMEN_FINAL.md` para el
-estado definitivo.)*
+Configuración ganadora (K=8, alpha=1.5, beta=5, rho=0.1, qfac=3, segunda
+feromona activada), 3 semillas. Dos corridas con el mismo presupuesto de
+tiempo de reloj (~15 min/semilla) pero número de hormigas distinto:
+
+| Configuración | Iteraciones hechas | L\_mejor media | Desv. estándar | Mejora vs. NN media | Pico de memoria |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| m = 20 000 (corrida real, `resultados/resultado_n200000_punto5.csv`) | 10 | 387,308 | 0,190 | 1,28 % | 102,4 MB |
+| m = 2 048 (igual presupuesto, `resultados/resultado_n200000_punto6.csv`) | ~108 | 385,485 | 0,550 | 1,75 % | 102,4 MB |
+
+A igual tiempo de reloj, `m=2 048` (más iteraciones) dio una longitud media
+menor que `m=20 000` (menos iteraciones) en las 3 de 3 semillas. Ver
+`docs/decisiones_diseno.md`, sección "Número de agentes", inciso (d), para
+el análisis estadístico completo (Wilcoxon no significativo con n=3, pero
+dirección consistente) y la interpretación.
+
+Costo de una iteración en n=200 000 (K=8, configuración ganadora, 3
+repeticiones, `resultados/costo_m_n200000_3reps.csv`): ver
+`docs/decisiones_diseno.md` para el ajuste lineal y la extrapolación a
+m=n=200 000, marcada como estimación.
