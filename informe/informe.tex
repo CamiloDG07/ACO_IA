@@ -270,60 +270,28 @@ feromona frente a la heurística: con $\alpha=0$ solo importa la distancia
 feromona acumulada, lo que típicamente lleva a estancamiento (todas las
 hormigas convergen al mismo tour, así no sea bueno). La
 ecuación~\eqref{eq:transicion} no elige siempre la arista de mayor peso: el
-código la implementa como una \textbf{ruleta}, es decir, recorre la lista de
-candidatas acumulando sus pesos hasta superar un número aleatorio en
-$[0, \text{suma total})$; así, una arista con el doble de peso que otra
-tiene el doble de probabilidad de salir elegida, pero no una certeza. Esa
-aleatoriedad controlada es la que permite explorar en vez de repetir
-siempre el mismo camino, y es la razón de fondo de por qué dos corridas con
-distinta semilla (misma configuración) dan tours distintos, como se ve en
-las curvas de convergencia de la sección~\ref{sec:resultados}.
+código la implementa como una \textbf{ruleta} probabilística sobre los
+pesos de las candidatas (mecánica detallada en el Anexo~A.3), lo que
+permite explorar en vez de repetir siempre el mismo camino y escapar de
+óptimos locales, la razón de fondo de por qué dos corridas con distinta
+semilla (misma configuración) dan tours distintos, como se ve en las curvas
+de convergencia de la sección~\ref{sec:resultados}.
 
 \subsection{Número de agentes}
 \label{sec:numero-agentes}
 Se adopta $m = \min(n, 20\,000)$: $n=20$ con $m=20$; $n=2\,000$ con
 $m=2\,000$; $n=200\,000$ con $m=20\,000$ (las $200\,000$ ciudades se
-ejecutan siempre completas).
-
-\paragraph{Por qué $m=n$ y por qué el tope de 20 000.} Dorigo y Stützle
-(2004, pp.~71, 103--112, 217) documentan $m=n$ para AS sin búsqueda local
-(convención de Dorigo, Maniezzo y Colorni 1991/1996, sin página propia por
-no verificarlos directamente), que esto implica un
-requisito de memoria $O(n^2)$ (${\approx}32n^2$ bytes, agravado aquí a
-$O(n^2K)$ por iteración —sección~\ref{sec:complejidad}—), y que ``el mejor
-valor de $m$ ... la mayoría de las veces debe fijarse experimentalmente'':
-exactamente lo que se hace aquí, por lo que $m=20\,000$ es una decisión de
-ingeniería para esta máquina, no un óptimo teórico. El tiempo medido en
-esta máquina para una iteración en $n=200\,000$, $K=8$, configuración
-ganadora (3 repeticiones,
-\texttt{\seqsplit{resultados/costo\_m\_n200000\_3reps.csv}}): 0,850~s
-($m=200$), 8,681~s ($m=2\,000$), 86,940~s ($m=20\,000$); ajuste lineal
-$t(m)\approx 0{,}004348\,m - 0{,}017$ s, $R^2=1{,}000000$.\footnote{Una
-medición anterior (Fase~2, sin segunda feromona, 1 repetición) había dado
-${\approx}144{,}85$ s para $m=20\,000$ (extrapolación ${\approx}24{,}3$
-min); la nueva da un tiempo por hormiga menor, consistente con la corrida
-real (${\approx}85$ s/iteración) —posiblemente porque la segunda feromona
-reduce la búsqueda de reserva, sin verificar con un experimento dedicado.}
-\textbf{Como estimación por extrapolación
-lineal, no como corrida real}, una iteración con $m=n=200\,000$ tomaría
-${\approx}870$ s (${\approx}14{,}5$ min): diez iteraciones tomarían más de
-2 horas por semilla, mientras que con $m=20\,000$ tomaron, en la corrida
-real, entre 13,8 y 14,2 minutos (\texttt{docs/bitacora.md}); la feromona se
-actualiza una sola vez por iteración sin importar cuántas hormigas
-corrieron (sección~\ref{sec:estrategias}), así que agregar hormigas solo
-agrega muestras, no actualizaciones.
-
-\paragraph{Respaldo empírico.} La calidad contra $m$ en $n=2\,000$ (50
-iteraciones fijas, 5 semillas, \texttt{resultados/barrido\_m.csv}) muestra
-rendimientos decrecientes marcados: de $m=10$ a $m=20\,000$ (2\,000 veces
-más hormigas) la longitud media mejora solo 2,4\,\% (39,84 a 38,89), con un
-costo de cómputo casi 1\,080 veces mayor.
+ejecutan siempre completas). La convención de la literatura del Ant System
+sugiere $m=n$, lo que para $n=200\,000$ resulta impracticable en esta
+máquina; el tope de 20\,000 es una decisión de ingeniería, justificada con
+su derivación completa (cita, costo medido, ajuste lineal y extrapolación)
+en el Anexo~A.1.
 
 La comparación a igual presupuesto de cómputo en $n=200\,000$ ($m=2\,048$
 contra $m=20\,000$, ~15 min de reloj por semilla, 3 semillas;
 \texttt{\seqsplit{resultados/resultado\_n200000\_punto5.csv}} y
-\texttt{\seqsplit{resultados/resultado\_n200000\_punto6.csv}}) confirma la
-misma tendencia con un dato directo:
+\texttt{\seqsplit{resultados/resultado\_n200000\_punto6.csv}}) es el dato
+central de esta subsección:
 
 \begin{table}[H]\centering
 \caption{Igual presupuesto de tiempo en n=200\,000: m=20\,000 (10 iteraciones) contra m=2\,048 (\textasciitilde108 iteraciones).}
@@ -336,15 +304,13 @@ $m=2\,048$ & $\approx$108 & 385,485 & 0,550 & 1,75\,\% \\
 \bottomrule\end{tabular}
 \end{table}
 
-Con el \textbf{mismo tiempo de reloj}, $m=2\,048$ dio una longitud media
-\textbf{menor} que $m=20\,000$, y ganó en las \textbf{3 de 3} semillas
-(diferencia siempre negativa: $-2{,}29$, $-0{,}99$, $-2{,}19$; Wilcoxon no
-significativo con $n=3$ pares, $p=0{,}25$, pero dirección unánime). Ni la
-saturación de calidad contra $m$, ni esta comparación, respaldan que
-$m=20\,000$ sea la forma más eficiente de gastar un presupuesto de tiempo
-fijo: el tope se sostiene por la convención de la literatura y el
-presupuesto de tiempo \emph{total} del proyecto, no por una ventaja de
-calidad medida.
+Se prefirió, en la práctica, $m=2\,048$ sobre $m=20\,000$: a igual tiempo de
+reloj dio mejor calidad en las 3 de 3 semillas (Wilcoxon no significativo
+con $n=3$, $p=0{,}25$, pero dirección unánime). El tope de 20\,000 se
+sostiene entonces por la convención de la literatura y el presupuesto de
+tiempo \emph{total} del proyecto, no por una ventaja de calidad medida
+(desarrollo completo, incluida la saturación de calidad contra $m$ en
+$n=2\,000$, en el Anexo~A.1).
 
 \subsection{Estructuras de datos y estrategias de ahorro}
 \label{sec:estrategias}
@@ -362,39 +328,29 @@ arreglo (localidad de caché). Ninguna hormiga guarda su tour completo: cada
 hilo reutiliza un único buffer y deposita feromona con operaciones atómicas
 al terminar, así que la memoria no depende de $m$.
 
-Esa actualización de feromona, que en el código ocurre una sola vez por
-iteración (relevante para la discusión de la sección~\ref{sec:numero-agentes}
-sobre el costo de $m$), sigue dos pasos. Primero se evapora una fracción
-$\rho$ de cada rastro:
+Esa actualización de feromona ocurre una sola vez por iteración (relevante
+para la sección~\ref{sec:numero-agentes} sobre el costo de $m$), en dos
+pasos: evaporación,
 \begin{equation}
 \tau_{ij} \leftarrow (1-\rho)\,\tau_{ij},
 \label{eq:evaporacion}
 \end{equation}
-lo que permite ``olvidar'' decisiones tomadas hace muchas iteraciones y evita
-que la feromona crezca sin límite; esta evaporación es, precisamente, el
-recorrido de $O(nK)$ mencionado como parte del costo de una iteración
-(sección~\ref{sec:complejidad}). Después, cada hormiga $k$ deposita
-feromona proporcional a la calidad de su tour:
+que ``olvida'' decisiones antiguas y evita que la feromona crezca sin
+límite; y depósito,
 \begin{equation}
 \Delta\tau^k_{ij} = \frac{Q}{L_k} \quad \text{si la hormiga $k$ usó la
 arista $(i,j)$}, \qquad \tau_{ij} \leftarrow \tau_{ij} + \sum_k
 \Delta\tau^k_{ij},
 \label{eq:deposito}
 \end{equation}
-donde $L_k$ es la longitud del tour de la hormiga $k$: entre más corto el
-tour, mayor el depósito. $Q$ se normaliza en este trabajo como
-$Q = q_{fac} \cdot L_{nn}/m$ ($L_{nn}$: longitud de un tour por vecino más
-cercano), para que el depósito no dependa de la escala arbitraria de las
-coordenadas ni del número de hormigas; esta normalización es la que hace
-comparables los valores de \texttt{qfac} usados en el barrido de parámetros
-(sección~\ref{sec:metodologia}) entre instancias de tamaño distinto. Este
-trabajo agrega, de forma opcional, una \textbf{segunda capa de feromona}
-$\tau_2$, reforzada solo por el mejor tour global de cada iteración, con un
-exponente $\alpha_2 < \alpha$ para que su influencia sea menor que la de la
-feromona principal; el peso final de cada arista es
-$w_{ij} = \tau_{ij}^{\alpha}\,\tau_{2,ij}^{\alpha_2}\,\eta_{ij}^{\beta}$, que
-es exactamente el ``peso precalculado por iteración'' de la
-Tabla~\ref{tab:estrategias}.
+proporcional a la calidad del tour ($L_k$: su longitud), con
+$Q = q_{fac} \cdot L_{nn}/m$ normalizado para ser comparable entre
+instancias de tamaño distinto (detalle en el Anexo~A.4). Este trabajo
+agrega, de forma opcional, una \textbf{segunda capa de feromona} $\tau_2$,
+reforzada solo por el mejor tour global, con exponente $\alpha_2 < \alpha$;
+el peso final de cada arista es
+$w_{ij} = \tau_{ij}^{\alpha}\,\tau_{2,ij}^{\alpha_2}\,\eta_{ij}^{\beta}$, el
+``peso precalculado por iteración'' de la Tabla~\ref{tab:estrategias}.
 
 % La tabla completa se genera en informe/tablas/estrategias_ahorro.tex a
 % partir de docs/estrategias_ahorro.md (bloque D/E).
@@ -487,17 +443,13 @@ Estado de construcción (buffers de tour y de visitado) & $O(n)$ por hilo & Inde
 \end{tabular}
 \end{table}
 
-\paragraph{Paralelismo.} Las hormigas son independientes entre sí durante la
-construcción (cada una solo lee la feromona y escribe en su propio buffer),
-así que el bucle de construcción paraleliza casi sin coordinación entre
-hilos (\texttt{\#pragma omp for schedule(dynamic,1)}); el depósito de
-feromona usa operaciones atómicas porque varias hormigas pueden depositar en
-la misma arista al mismo tiempo. La parte estrictamente secuencial de cada
-iteración es la evaporación, el recálculo de pesos y la actualización del
-mejor global: por la ley de Amdahl, esa fracción secuencial $s$ acota la
-aceleración máxima posible con $p$ hilos a $1/(s + (1-s)/p)$. La
-aceleración medida contra el número de hilos (sección~\ref{sec:tiempo-memoria})
-se compara contra esta cota.
+\paragraph{Paralelismo.} Las hormigas se construyen en paralelo casi sin
+coordinación entre hilos; la fracción estrictamente secuencial $s$ de cada
+iteración (evaporación, pesos, mejor global) acota, por la ley de Amdahl, la
+aceleración máxima con $p$ hilos a $1/(s + (1-s)/p)$ (justificación de por
+qué esa fracción es secuencial y no otra, en el Anexo~A.2). La aceleración
+medida contra el número de hilos (sección~\ref{sec:tiempo-memoria}) se
+compara contra esta cota.
 
 % ====================================================================
 \section{Metodología experimental}
@@ -782,8 +734,8 @@ argumento que la Figura~\ref{fig:memoria-densa-dispersa} hace en memoria.
 
 \subsection{Igual presupuesto de cómputo en n = 200 000}
 Ver la tabla~\ref{tab:igual_presupuesto} y la discusión de la
-sección~\ref{sec:numero-agentes}, párrafo ``Respaldo empírico'': con el mismo
-tiempo de reloj, $m=2\,048$ (más iteraciones) superó a $m=20\,000$ (menos
+sección~\ref{sec:numero-agentes} (desarrollo completo en el Anexo~A.1): con el
+mismo tiempo de reloj, $m=2\,048$ (más iteraciones) superó a $m=20\,000$ (menos
 iteraciones) en las tres semillas probadas.
 
 \subsection{Aceleración y eficiencia por número de hilos}
@@ -966,7 +918,110 @@ Colony Optimization).
 \end{itemize}
 
 % ====================================================================
-\section{Anexo}
+\section{Anexo A: Fundamentos y derivaciones teóricas}
+\label{sec:anexoA}
+Este anexo reúne el detalle teórico más largo que el cuerpo del informe solo
+resume: citas completas, ajustes numéricos paso a paso y aclaraciones
+defensivas. Cada punto del cuerpo que remite aquí queda con su fórmula, su
+tabla y una conclusión corta; el desarrollo completo está en esta sección.
+
+\subsection*{A.1 Número de agentes: cita completa, costo y extrapolación}
+Dorigo y Stützle (2004, \emph{Ant Colony Optimization}, MIT Press)
+documentan, en la tabla de parámetros recomendados para AS y sus variantes
+sin búsqueda local (p.~71, Box~3.1), que el número de hormigas se fija en
+$m=n$; en las pp.~103--104 explican que esto hace el requisito de memoria
+$O(n^2)$ (${\approx}32n^2$ bytes); y en la p.~112 atribuyen la convención
+$m \propto n$ a los artículos originales de Dorigo, Maniezzo y Colorni
+(1991, 1996) —sin página propia, por no haberlos verificado directamente—.
+En la sección 5.7.6 (p.~217) señalan además que ``el mejor valor de $m$ es
+función del algoritmo ACO particular y de la clase de problemas atacados, y
+la mayoría de las veces debe fijarse experimentalmente'': exactamente lo
+que se hace en este trabajo, por lo que $m=20\,000$ es una decisión de
+ingeniería para esta máquina y no un óptimo teórico.
+
+Con lista de candidatos de tamaño $K$, una iteración cuesta $O(mnK)$; con
+$m=n$ pasa a $O(n^2K)$ (sección~\ref{sec:complejidad}). El tiempo medido en
+esta máquina para una iteración en $n=200\,000$, $K=8$, configuración
+ganadora (3 repeticiones,
+\texttt{\seqsplit{resultados/costo\_m\_n200000\_3reps.csv}}): 0,850~s
+($m=200$), 8,681~s ($m=2\,000$), 86,940~s ($m=20\,000$); ajuste lineal por
+mínimos cuadrados $t(m)\approx 0{,}004348\,m - 0{,}017$ segundos, con
+$R^2=1{,}000000$. Una medición anterior (Fase~2, sin segunda feromona, 1
+repetición) había dado ${\approx}144{,}85$ s para $m=20\,000$ y una
+extrapolación de ${\approx}24{,}3$ min; la medición con 3 repeticiones y la
+configuración ganadora da un tiempo por hormiga menor, consistente con la
+corrida real del punto 5 (${\approx}85$ s/iteración): posiblemente porque
+la segunda feromona guía a las hormigas de forma más decisiva y reduce
+cuánto recurren a la búsqueda de reserva, una explicación plausible, no
+verificada con un experimento dedicado. \textbf{Como estimación por
+extrapolación lineal, no como corrida real}, una iteración con
+$m=n=200\,000$ tomaría ${\approx}870$ s (${\approx}14{,}5$ min): diez
+iteraciones tomarían más de 2 horas por semilla, mientras que con
+$m=20\,000$ tomaron, en la corrida real, entre 13,8 y 14,2 minutos
+(\texttt{docs/bitacora.md}); la feromona se actualiza una sola vez por
+iteración sin importar cuántas hormigas corrieron, así que agregar hormigas
+solo agrega muestras, no actualizaciones.
+
+La calidad contra $m$ en $n=2\,000$ (50 iteraciones fijas, 5 semillas,
+\texttt{\seqsplit{resultados/barrido\_m.csv}}) muestra rendimientos decrecientes
+marcados: de $m=10$ a $m=20\,000$ (2\,000 veces más hormigas) la longitud
+media mejora solo 2,4\,\% (39,84 a 38,89), con un costo de cómputo casi
+1\,080 veces mayor. Ni esta saturación, ni la comparación a igual
+presupuesto de la Tabla~\ref{tab:igual_presupuesto}, respaldan que
+$m=20\,000$ sea la forma más eficiente de gastar un presupuesto de tiempo
+fijo en esta máquina.
+
+\subsection*{A.2 Paralelismo: por qué esa fracción es secuencial}
+Las hormigas son independientes entre sí durante la construcción (cada una
+solo lee la feromona y escribe en su propio buffer), así que el bucle de
+construcción paraleliza casi sin coordinación entre hilos
+(\texttt{\#pragma omp for schedule(dynamic,1)}); el depósito de feromona
+usa operaciones atómicas porque varias hormigas pueden depositar en la
+misma arista al mismo tiempo, no porque la construcción misma necesite
+coordinación. La parte estrictamente secuencial de cada iteración es la
+evaporación, el recálculo de pesos y la actualización del mejor global:
+ninguna de las tres puede repartirse entre hormigas, porque dependen del
+resultado agregado de todas ellas (la evaporación y los pesos se aplican
+sobre el arreglo completo de feromona antes de que la siguiente iteración
+arranque; el mejor global se decide comparando los mejores locales de cada
+hilo). Por la ley de Amdahl, esa fracción secuencial $s$ acota la
+aceleración máxima posible con $p$ hilos a $1/(s + (1-s)/p)$, sin importar
+cuántos hilos tenga el equipo.
+
+\subsection*{A.3 Construcción del tour: mecánica de la ruleta}
+El código implementa la ecuación~\eqref{eq:transicion} como una ruleta: en
+vez de elegir siempre la arista de mayor peso, recorre la lista de $K$
+candidatas acumulando sus pesos hasta superar un número aleatorio en
+$[0, \text{suma total})$. Así, una arista con el doble de peso que otra
+tiene el doble de probabilidad de salir elegida, pero no una certeza: con
+peso $0$ una candidata nunca sale elegida (ya fue visitada), y entre las
+candidatas restantes la probabilidad de cada una es exactamente su peso
+dividido entre la suma de los pesos disponibles en ese paso, tal como pide
+la ecuación~\eqref{eq:transicion}. Esa aleatoriedad controlada es la que
+permite explorar en vez de repetir siempre el mismo camino: sin ella, todas
+las hormigas de una iteración construirían el mismo tour a partir de la
+misma ciudad, y el algoritmo se comportaría como una búsqueda golosa
+determinista, sin ninguna forma de escapar de un óptimo local una vez que
+la feromona empieza a favorecer un camino.
+
+\subsection*{A.4 Depósito y evaporación: por qué se normaliza $Q$}
+$Q$ se normaliza en este trabajo como $Q = q_{fac} \cdot L_{nn}/m$
+($L_{nn}$: longitud de un tour por vecino más cercano), para que el
+depósito no dependa de la escala arbitraria de las coordenadas ni del
+número de hormigas. Sin esta normalización, cambiar $m$ o cambiar la
+semilla (que reescala levemente las coordenadas generadas) alteraría el
+depósito de feromona por razones ajenas a la calidad del tour, y los
+valores de \texttt{qfac} usados en el barrido de parámetros
+(sección~\ref{sec:metodologia}) no serían comparables entre instancias de
+tamaño distinto ni entre configuraciones con $m$ distinto: un mismo
+\texttt{qfac} produce, gracias a la normalización, un depósito de magnitud
+comparable sin importar cuántas ciudades o cuántas hormigas tenga la
+corrida. La evaporación (ecuación~\eqref{eq:evaporacion}) es, precisamente,
+el recorrido de $O(nK)$ mencionado como parte del costo de una iteración
+(sección~\ref{sec:complejidad}).
+
+% ====================================================================
+\section{Anexo B: Reproducibilidad y glosario}
 
 \subsection{Cómo reproducir cada tabla y figura}
 Todos los comandos se ejecutan desde la raíz del repositorio
