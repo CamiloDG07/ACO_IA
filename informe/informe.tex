@@ -164,34 +164,17 @@ diseño no necesita coordinar las hormigas entre sí durante la construcción
 alcanza en la mayoría de los casos (sección~\ref{sec:numero-agentes}).
 
 \subsection{Elección de lenguaje}
-El proyecto se implementa en C++20 con OpenMP; no se implementó nada en
-Python, C ni Rust, y no se hicieron comparaciones de lenguaje. La
-justificación es breve y teórica, no empírica:
-
-Python se descarta por tres razones estructurales: la sobrecarga del bucle
-de evaluación de bytecode del intérprete de CPython en cada operación
-aritmética del paso de una hormiga; el acceso irregular a memoria, que
-Python (incluso con \texttt{numpy} en presencia de lógica de control como la
-ruleta) no permite controlar con la precisión de un arreglo contiguo de
-$n \cdot K$ elementos; y la falta de paralelismo real dentro de un proceso,
-por el \emph{Global Interpreter Lock} (GIL) de CPython, que impide que dos
-hilos ejecuten bytecode de Python al mismo tiempo, justo cuando la parte
-costosa del algoritmo (la construcción de tours por hormigas independientes)
-es la que se querría paralelizar con hilos.
-
-El criterio de selección es explícito: como el ejercicio exige ahorrar
-memoria y tiempo, interesan los lenguajes que dan control directo sobre
-ambos (C, C++, Rust y Zig); se descarta el ensamblador, tanto porque el
-docente lo excluye como porque en un algoritmo dominado por accesos a
-memoria y por la lógica de la ruleta, escribirlo a mano no mejora lo que ya
-optimiza el compilador.
-
-Esta es una \textbf{comparación cualitativa}: no se midió ningún otro
-lenguaje, y las diferencias de rendimiento esperadas entre C, C++ y Rust en
-este problema se esperan pequeñas (del orden de pocos puntos porcentuales),
-porque el tiempo lo dominan los accesos irregulares a memoria, el número de
-hilos disponibles y el algoritmo mismo, no el lenguaje; esto es una
-expectativa razonada, no un resultado medido en este trabajo.
+Se implementó en C++20 con OpenMP; la elección frente a C, Rust y Python es
+cualitativa, no medida (diferencias esperadas de pocos puntos porcentuales,
+dominadas por accesos a memoria e hilos, no por el lenguaje), y descarta
+también el ensamblador, excluido por el enunciado y sin ventaja real sobre
+el compilador en un algoritmo dominado por accesos a memoria. Python se
+descarta por tres razones estructurales:
+\begin{itemize}
+\item sobrecarga de bytecode por operación (CPython)
+\item acceso irregular a memoria, ni con \texttt{numpy}
+\item GIL: sin paralelismo real entre hilos
+\end{itemize}
 
 \begin{table}[H]
 \centering
@@ -233,12 +216,9 @@ Python + Numba/Cython & El código de alto nivel sigue en Python; habría que ac
 \end{tabular}
 \end{table}
 
-Se elige C++ por las tres razones prácticas de la Tabla~\ref{tab:lenguajes} (paralelismo casi
-sin código adicional, instalación sencilla en Windows, código base ya
-validado), no por incapacidad de los demás: Rust habría sido igual de
-válido si el criterio principal fuera la seguridad de memoria, y C igual de
-rápido con más código. Ver \texttt{\seqsplit{docs/decisiones\_diseno.md}}
-para la tabla completa de la decisión.
+Se elige C++ por paralelismo simple con OpenMP, instalación sencilla en
+Windows y código base ya validado (ver
+\texttt{\seqsplit{docs/decisiones\_diseno.md}} para la tabla completa).
 
 \subsection{Construcción del tour}
 \label{sec:construccion-tour}
