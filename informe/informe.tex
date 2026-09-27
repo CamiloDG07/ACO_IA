@@ -158,10 +158,10 @@ coordinación indirecta entre agentes a través de cambios que cada uno deja
 en el ambiente, sin que haya comunicación directa entre ellos. El
 comportamiento colectivo (converger al camino corto) es \emph{emergente}:
 ninguna hormiga individual ``sabe'' cuál es el camino más corto, pero el
-sistema completo lo encuentra. Esta idea es la que justifica, más adelante,
-por qué el diseño no necesita coordinar las hormigas entre sí durante la
-construcción (sección~\ref{sec:estrategias}) ni por qué una sola capa de
-feromona alcanza en la mayoría de los casos (sección~\ref{sec:numero-agentes}).
+sistema completo lo encuentra, lo que justifica, más adelante, por qué el
+diseño no necesita coordinar las hormigas entre sí durante la construcción
+(sección~\ref{sec:estrategias}) ni por qué una sola capa de feromona
+alcanza en la mayoría de los casos (sección~\ref{sec:numero-agentes}).
 
 \subsection{Elección de lenguaje}
 El proyecto se implementa en C++20 con OpenMP; no se implementó nada en
@@ -196,6 +196,7 @@ expectativa razonada, no un resultado medido en este trabajo.
 \begin{table}[H]
 \centering
 \caption{C++, Rust y C frente a los criterios relevantes para este problema.}
+\label{tab:lenguajes}
 \footnotesize
 \begin{tabular}{p{2.3cm}p{3.3cm}p{3.3cm}p{3.3cm}}
 \toprule
@@ -212,34 +213,32 @@ Curva de aprendizaje y depuración & Conocida por el equipo, depuradores maduros
 \end{tabular}
 \end{table}
 
-Otras alternativas y por qué no se eligieron: \textbf{Zig} (tan rápido como
-C, pero un lenguaje joven, con poca documentación y comunidad pequeña);
-\textbf{Go} (paralelismo sencillo con goroutines, pero su recolector de
-basura suele dejarlo por debajo en cálculo intensivo de memoria); \textbf{Julia}
-(cercano a C++ en cálculo científico, pero con tiempo de compilación inicial
-notable y mayor uso de memoria en tiempo de ejecución); \textbf{Java o C\#}
-(buen rendimiento después del calentamiento de la máquina virtual, pero más
-memoria y menos control fino, justo lo que este ejercicio pretende ahorrar);
-\textbf{Fortran} (excelente para cálculo con matrices densas, pero poco
-natural para grafos, listas de vecinas y rejillas espaciales, la estructura
-central de este proyecto); \textbf{Python con Numba o Cython} (el código de
-alto nivel sigue escrito en Python, y el docente ya advirtió que Python
-puede no alcanzar; usar estas herramientas exigiría además aclarar con
-precisión qué parte del código corre realmente compilada y cuál sigue
-interpretada, una complejidad que no se justifica frente a partir
-directamente de C++).
+\begin{table}[H]
+\centering
+\caption{Otras alternativas consideradas y por qué no se eligieron.}
+\label{tab:alternativas}
+\footnotesize
+\begin{tabular}{p{2.3cm}p{10.2cm}}
+\toprule
+\rowcolor{gray!25}
+\textbf{Alternativa} & \textbf{Motivo de descarte} \\
+\midrule
+Zig & Tan rápido como C, pero lenguaje joven, con poca documentación y comunidad pequeña \\
+Go & Paralelismo sencillo con goroutines, pero el recolector de basura lo deja por debajo en cálculo intensivo de memoria \\
+Julia & Cercano a C++ en cálculo científico, pero con arranque de compilación notable y más memoria en tiempo de ejecución \\
+Java / C\# & Buen rendimiento tras el calentamiento de la máquina virtual, pero más memoria y menos control fino \\
+Fortran & Excelente con matrices densas, poco natural para grafos, listas de vecinas y rejillas espaciales \\
+Python + Numba/Cython & El código de alto nivel sigue en Python; habría que aclarar qué parte corre compilada y cuál interpretada \\
+\bottomrule
+\end{tabular}
+\end{table}
 
-Se elige C++ por tres razones prácticas, no por descartar a los demás por
-incapacidad técnica: OpenMP se integra casi sin código adicional, el
-compilador se instala en Windows con un solo paquete (WinLibs), y ya existía
-un código base validado con pruebas automáticas. Rust habría sido una
-alternativa igualmente válida si el criterio principal hubiera sido la
-seguridad de memoria (el \emph{borrow checker} evita en tiempo de
-compilación errores que en C++ solo aparecen en tiempo de ejecución); C
-habría sido igual de rápido, con más código para lograr lo mismo que la
-librería estándar de C++ da de fábrica (vectores, atómicos, ordenación).
-Ver \texttt{docs/decisiones\_diseno.md} para la tabla completa de la
-decisión.
+Se elige C++ por las tres razones prácticas de la Tabla~\ref{tab:lenguajes} (paralelismo casi
+sin código adicional, instalación sencilla en Windows, código base ya
+validado), no por incapacidad de los demás: Rust habría sido igual de
+válido si el criterio principal fuera la seguridad de memoria, y C igual de
+rápido con más código. Ver \texttt{\seqsplit{docs/decisiones\_diseno.md}}
+para la tabla completa de la decisión.
 
 \subsection{Construcción del tour}
 \label{sec:construccion-tour}
@@ -286,44 +285,33 @@ Se adopta $m = \min(n, 20\,000)$: $n=20$ con $m=20$; $n=2\,000$ con
 $m=2\,000$; $n=200\,000$ con $m=20\,000$ (las $200\,000$ ciudades se
 ejecutan siempre completas).
 
-\paragraph{Convención de la literatura.} Dorigo y Stützle (2004, \emph{Ant
-Colony Optimization}, MIT Press) documentan, en la tabla de parámetros
-recomendados para AS y sus variantes sin búsqueda local (p.~71, Box~3.1),
-que el número de hormigas se fija en $m=n$; en las pp.~103--104 explican que
-esto hace el requisito de memoria $O(n^2)$ (${\approx}32n^2$ bytes); y en la
-p.~112 atribuyen la convención $m \propto n$ a los artículos originales de
-Dorigo, Maniezzo y Colorni (1991, 1996). No se cita una página de esos
-artículos originales por no haberlos verificado directamente.
-
-\paragraph{Costo y extrapolación.} Con lista de candidatos de tamaño $K$,
-una iteración cuesta $O(m n K)$; con $m=n$ pasa a $O(n^2 K)$. El tiempo
-medido en esta máquina para una iteración en $n=200\,000$, $K=8$, con la
-configuración ganadora (3 repeticiones cada una,
-\texttt{\seqsplit{resultados/costo\_m\_n200000\_3reps.csv}})
-fue de 0,850~s ($m=200$), 8,681~s ($m=2\,000$) y 86,940~s ($m=20\,000$). El
-ajuste lineal por mínimos cuadrados da $t(m) \approx 0{,}004348\,m -
-0{,}017$ segundos, con $R^2 = 1{,}000000$. \textbf{Como estimación por
-extrapolación lineal, no como corrida real}, una iteración con
-$m=n=200\,000$ tomaría ${\approx}870$ s (${\approx}14{,}5$ min). Una
-medición anterior de un solo punto (Fase~2, configuración sin segunda
-feromona) había dado ${\approx}144{,}85$ s para $m=20\,000$ y una
-extrapolación de ${\approx}24{,}3$ min; la medición con la configuración
-ganadora y 3 repeticiones da un tiempo por hormiga menor, consistente con lo
-observado directamente en la corrida real del punto 5 (${\approx}85$
-s/iteración medidos, ver la tabla siguiente): una explicación plausible,
-no verificada con un experimento dedicado, es que la segunda feromona guía
-a las hormigas de forma más decisiva y reduce cuánto recurren a la búsqueda
-de reserva (la parte más cara de un paso de construcción).
-
-\paragraph{Por qué el tope de 20 000.} Es una decisión de presupuesto de
-cómputo de esta máquina (Fase~0), no una propiedad del algoritmo: diez
-iteraciones con $m=n=200\,000$ tomarían más de 2 horas por semilla
-(extrapolado), mientras que con $m=20\,000$ tomaron, en la corrida real,
-entre 13,8 y 14,2 minutos por semilla (medido directamente,
-\texttt{docs/bitacora.md}). Además, la feromona se actualiza una sola vez
-por iteración sin importar cuántas hormigas corrieron, así que agregar
-hormigas no agrega actualizaciones de feromona, solo muestras adicionales
-antes de esa única actualización.
+\paragraph{Por qué $m=n$ y por qué el tope de 20 000.} Dorigo y Stützle
+(2004, pp.~71, 103--112, 217) documentan $m=n$ para AS sin búsqueda local
+(convención de Dorigo, Maniezzo y Colorni 1991/1996, sin página propia por
+no verificarlos directamente), que esto implica un
+requisito de memoria $O(n^2)$ (${\approx}32n^2$ bytes, agravado aquí a
+$O(n^2K)$ por iteración —sección~\ref{sec:complejidad}—), y que ``el mejor
+valor de $m$ ... la mayoría de las veces debe fijarse experimentalmente'':
+exactamente lo que se hace aquí, por lo que $m=20\,000$ es una decisión de
+ingeniería para esta máquina, no un óptimo teórico. El tiempo medido en
+esta máquina para una iteración en $n=200\,000$, $K=8$, configuración
+ganadora (3 repeticiones,
+\texttt{\seqsplit{resultados/costo\_m\_n200000\_3reps.csv}}): 0,850~s
+($m=200$), 8,681~s ($m=2\,000$), 86,940~s ($m=20\,000$); ajuste lineal
+$t(m)\approx 0{,}004348\,m - 0{,}017$ s, $R^2=1{,}000000$.\footnote{Una
+medición anterior (Fase~2, sin segunda feromona, 1 repetición) había dado
+${\approx}144{,}85$ s para $m=20\,000$ (extrapolación ${\approx}24{,}3$
+min); la nueva da un tiempo por hormiga menor, consistente con la corrida
+real (${\approx}85$ s/iteración) —posiblemente porque la segunda feromona
+reduce la búsqueda de reserva, sin verificar con un experimento dedicado.}
+\textbf{Como estimación por extrapolación
+lineal, no como corrida real}, una iteración con $m=n=200\,000$ tomaría
+${\approx}870$ s (${\approx}14{,}5$ min): diez iteraciones tomarían más de
+2 horas por semilla, mientras que con $m=20\,000$ tomaron, en la corrida
+real, entre 13,8 y 14,2 minutos (\texttt{docs/bitacora.md}); la feromona se
+actualiza una sola vez por iteración sin importar cuántas hormigas
+corrieron (sección~\ref{sec:estrategias}), así que agregar hormigas solo
+agrega muestras, no actualizaciones.
 
 \paragraph{Respaldo empírico.} La calidad contra $m$ en $n=2\,000$ (50
 iteraciones fijas, 5 semillas, \texttt{resultados/barrido\_m.csv}) muestra
@@ -332,9 +320,10 @@ más hormigas) la longitud media mejora solo 2,4\,\% (39,84 a 38,89), con un
 costo de cómputo casi 1\,080 veces mayor.
 
 La comparación a igual presupuesto de cómputo en $n=200\,000$ ($m=2\,048$
-contra $m=20\,000$, ~15 minutos de reloj por semilla, 3 semillas;
+contra $m=20\,000$, ~15 min de reloj por semilla, 3 semillas;
 \texttt{\seqsplit{resultados/resultado\_n200000\_punto5.csv}} y
-\texttt{\seqsplit{resultados/resultado\_n200000\_punto6.csv}}) sí se completó:
+\texttt{\seqsplit{resultados/resultado\_n200000\_punto6.csv}}) confirma la
+misma tendencia con un dato directo:
 
 \begin{table}[H]\centering
 \caption{Igual presupuesto de tiempo en n=200\,000: m=20\,000 (10 iteraciones) contra m=2\,048 (\textasciitilde108 iteraciones).}
@@ -347,25 +336,15 @@ $m=2\,048$ & $\approx$108 & 385,485 & 0,550 & 1,75\,\% \\
 \bottomrule\end{tabular}
 \end{table}
 
-Con el \textbf{mismo tiempo de reloj}, $m=2\,048$ (muchas más iteraciones,
-pocas hormigas por iteración) dio una longitud media \textbf{menor} que
-$m=20\,000$ (pocas iteraciones, muchas hormigas), y ganó en las
-\textbf{3 de 3} semillas (diferencia por semilla siempre negativa: $-2{,}29$,
-$-0{,}99$, $-2{,}19$). Con solo 3 semillas la prueba de Wilcoxon no alcanza
-significancia convencional ($p=0{,}25$, el mínimo posible con $n=3$ pares),
-pero la dirección del efecto es completamente consistente. Ni la saturación
-de calidad contra $m$ en $n=2\,000$, ni esta comparación directa en
-$n=200\,000$, respaldan que $m=20\,000$ sea la forma más eficiente de gastar
-un presupuesto de tiempo fijo en esta máquina: el tope adoptado se sostiene
-por la convención de la literatura y por el presupuesto de tiempo
-\emph{total} del proyecto, no porque los datos muestren una ventaja de
-calidad de usar más hormigas por iteración.
-
-\paragraph{Aclaración.} 20\,000 es una decisión de ingeniería para esta
-máquina y este equipo, no un óptimo teórico. Dorigo y Stützle (2004, p.~217,
-sección 5.7.6) señalan que ``el mejor valor de $m$ es función del algoritmo
-ACO particular y de la clase de problemas atacados, y la mayoría de las
-veces debe fijarse experimentalmente''.
+Con el \textbf{mismo tiempo de reloj}, $m=2\,048$ dio una longitud media
+\textbf{menor} que $m=20\,000$, y ganó en las \textbf{3 de 3} semillas
+(diferencia siempre negativa: $-2{,}29$, $-0{,}99$, $-2{,}19$; Wilcoxon no
+significativo con $n=3$ pares, $p=0{,}25$, pero dirección unánime). Ni la
+saturación de calidad contra $m$, ni esta comparación, respaldan que
+$m=20\,000$ sea la forma más eficiente de gastar un presupuesto de tiempo
+fijo: el tope se sostiene por la convención de la literatura y el
+presupuesto de tiempo \emph{total} del proyecto, no por una ventaja de
+calidad medida.
 
 \subsection{Estructuras de datos y estrategias de ahorro}
 \label{sec:estrategias}
@@ -472,50 +451,53 @@ Cada afirmación de costo de este trabajo tiene una derivación teórica y una
 comprobación empírica (sección~\ref{sec:tiempo-memoria}); aquí se presenta
 solo la derivación.
 
-\paragraph{Espacio de búsqueda.} $(n-1)!/2$ (ecuación~\ref{eq:factorial});
-fuerza bruta inviable para cualquier $n$ de interés práctico. Held-Karp
-resuelve el óptimo exacto en $O(n^2 2^n)$: para $n=20$, $2^{20}\approx 10^6$
-hace que $n^2 2^n \approx 4\times10\,^8$ operaciones sea viable en segundos;
-para $n=2\,000$ o $n=200\,000$, $2^n$ desborda cualquier computador
-existente. ACO no da esa garantía de optimalidad, pero explora una fracción
-minúscula del espacio en tiempo polinomial.
+\begin{table}[H]
+\centering
+\caption{Complejidad en tiempo, derivada por componente.}
+\label{tab:complejidad-tiempo}
+\footnotesize
+\begin{tabular}{p{3.0cm}p{2.6cm}p{8.4cm}}
+\toprule
+\rowcolor{gray!25}
+\textbf{Componente} & \textbf{Complejidad} & \textbf{Por qué} \\
+\midrule
+Espacio de búsqueda & $(n-1)!/2$; Held-Karp $O(n^2 2^n)$ & Fuerza bruta inviable para cualquier $n$ práctico; Held-Karp es exacto pero exponencial, viable solo en $n=20$ (nota 1); ACO explora una fracción minúscula del espacio en tiempo polinomial, sin garantía de optimalidad \\
+Construcción de una hormiga & $O(nK)$ (+ reserva) & $K$ candidatas por paso; la búsqueda de reserva por rejilla (cuando las $K$ ya están visitadas) es más cara al final del tour, con pocas ciudades libres \\
+Una iteración & $O(mnK)$; $O(n^2K)$ si $m=n$ & $m$ hormigas $\times$ $O(nK)$ cada una, más $O(nK)$ de evaporación y recálculo de pesos; con matriz densa serían $O(mn^2)$ en tiempo y $O(n^2)$ en memoria (comparación \texttt{aco\_tsp}/\texttt{aco\_denso} en la sección~\ref{sec:tiempo-memoria}) \\
+\bottomrule
+\end{tabular}
+\end{table}
+{\footnotesize Nota 1: $2^{20}\approx 10^6$, así que $n^2 2^n \approx
+4\times10^8$ operaciones es viable en segundos; para $n=2\,000$ o
+$n=200\,000$, $2^n$ desborda cualquier computador existente.}
 
-\paragraph{Construcción de una hormiga.} Con lista de $K$ candidatas,
-$O(nK)$: en cada uno de los $n$ pasos del tour se recorren las $K$
-candidatas para la ruleta. A esto se suma el costo, menor en el caso
-habitual, de las búsquedas de reserva por rejilla cuando las $K$ candidatas
-ya están visitadas; esa búsqueda de reserva tiende a ser más cara al final
-del tour, porque quedan pocas ciudades sin visitar y hay que revisar más
-anillos de celdas hasta encontrar una libre.
-
-\paragraph{Una iteración.} Construcción: $O(mnK)$ ($m$ hormigas, cada una
-$O(nK)$). Evaporación y recálculo de pesos: $O(nK)$ (un recorrido sobre los
-$nK$ arreglos de feromona/heurística). Con la convención de la literatura
-$m=n$ (sección~\ref{sec:numero-agentes}), el costo de construcción de una
-iteración pasa a ser $O(n^2 K)$. Con matriz densa (sin lista de candidatas),
-estos costos serían $O(mn^2)$ en tiempo y $O(n^2)$ en memoria (dos matrices,
-distancia y feromona): la comparación directa entre \texttt{aco\_tsp} (dispersa)
-y \texttt{aco\_denso} (densa) en la sección~\ref{sec:tiempo-memoria} confirma
-esta diferencia de orden.
-
-\paragraph{Memoria.} $O(nK)$ para las estructuras de la instancia (vecinas,
-distancias, feromona, feromona secundaria, pesos), más $O(n)$ por hilo para
-el estado de construcción (buffers de tour y de visitado), independiente de
-$m$: las hormigas no guardan su tour, así que agregar más hormigas por
-iteración no agrega arreglos de tamaño $n$ adicionales, solo más trabajo de
-CPU repitiendo el mismo buffer por hilo.
+\begin{table}[H]
+\centering
+\caption{Complejidad en memoria, derivada por estructura.}
+\label{tab:complejidad-memoria}
+\footnotesize
+\begin{tabular}{p{5.5cm}p{2.0cm}p{6.5cm}}
+\toprule
+\rowcolor{gray!25}
+\textbf{Estructura} & \textbf{Tamaño} & \textbf{Nota} \\
+\midrule
+Vecinas, distancias, feromona(s) y pesos & $O(nK)$ & Por instancia, no por hormiga \\
+Estado de construcción (buffers de tour y de visitado) & $O(n)$ por hilo & Independiente de $m$: las hormigas no guardan su tour, así que más hormigas por iteración no agrega arreglos, solo más trabajo de CPU repitiendo el mismo buffer \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \paragraph{Paralelismo.} Las hormigas son independientes entre sí durante la
 construcción (cada una solo lee la feromona y escribe en su propio buffer),
 así que el bucle de construcción paraleliza casi sin coordinación entre
-hilos (\texttt{\seqsplit{\#pragma omp for schedule(dynamic,1)}}); el depósito de
+hilos (\texttt{\#pragma omp for schedule(dynamic,1)}); el depósito de
 feromona usa operaciones atómicas porque varias hormigas pueden depositar en
 la misma arista al mismo tiempo. La parte estrictamente secuencial de cada
 iteración es la evaporación, el recálculo de pesos y la actualización del
 mejor global: por la ley de Amdahl, esa fracción secuencial $s$ acota la
-aceleración máxima posible con $p$ hilos a $1/(s + (1-s)/p)$, sin importar
-cuántos hilos tenga el equipo. La aceleración medida contra el número de
-hilos (sección~\ref{sec:tiempo-memoria}) se compara contra esta cota.
+aceleración máxima posible con $p$ hilos a $1/(s + (1-s)/p)$. La
+aceleración medida contra el número de hilos (sección~\ref{sec:tiempo-memoria})
+se compara contra esta cota.
 
 % ====================================================================
 \section{Metodología experimental}
@@ -628,8 +610,8 @@ feromona acumulada y favorece la explotación (riesgo: estancamiento
 prematuro); $\beta$ alto favorece los vecinos cercanos sin importar la
 feromona (riesgo: ignorar información útil de iteraciones pasadas); $\rho$
 alto olvida rápido el pasado (más exploración, pero también más varianza
-entre corridas). Los dos mapas de calor de abajo son, precisamente, un
-barrido de ese equilibrio en esta instancia:
+entre corridas), equilibrio que barren, precisamente, los dos mapas de
+calor de abajo en esta instancia:
 
 \begin{figure}[H]
 \centering
@@ -994,22 +976,22 @@ con los ejecutables ya compilados (ver \texttt{README.md}).
 {\small
 \begin{itemize}
 \item \textbf{Tabla~\ref{tab:n20} (n=20)}: \texttt{\seqsplit{resultados/instancia\_n20.csv}},
-generada con 5 llamadas a
-\texttt{\seqsplit{aco\_tsp.exe --n 20 --ants 20 --iters 100 --K 19 --exact 1 --seed \{1..5\}}};
-tabla producida por \texttt{\seqsplit{python scripts/generar\_figuras.py tabla\_n20}}.
+generada con 5 llamadas a \texttt{aco\_tsp.exe} (\texttt{-{}-n 20 -{}-ants 20
+-{}-iters 100 -{}-K 19 -{}-exact 1 -{}-seed \{1..5\}}); tabla producida por
+\texttt{python scripts/generar\_figuras.py tabla\_n20}.
 \item \textbf{Tabla~\ref{tab:n2000} (n=2\,000)}:
-\texttt{\seqsplit{python scripts/seleccion\_configuracion.py}} (8 semillas,
+\texttt{\seqsplit{scripts/seleccion\_configuracion.py}} (8 semillas,
 3 configuraciones); tabla producida por
-\texttt{\seqsplit{python scripts/generar\_figuras.py tabla\_n2000}}.
+\texttt{python scripts/generar\_figuras.py tabla\_n2000}.
 \item \textbf{Figura de crecimiento factorial}:
-\texttt{\seqsplit{python scripts/generar\_figuras.py factorial}} (sin
+\texttt{python scripts/generar\_figuras.py factorial} (sin
 dependencias de \texttt{resultados/}, cálculo directo con \texttt{lgamma}).
-\item \textbf{Diagramas de caja por configuración}:
-\texttt{\seqsplit{python scripts/experimentos\_fase2.py barrido\_parametros}}
-y luego \texttt{\seqsplit{python scripts/generar\_figuras.py boxplots}}.
+\item \textbf{Diagramas de caja por configuración}: \texttt{python}
+\texttt{\seqsplit{scripts/experimentos\_fase2.py}} \texttt{\seqsplit{barrido\_parametros}}
+y luego \texttt{python} \texttt{\seqsplit{scripts/generar\_figuras.py}} \texttt{boxplots}.
 \item \textbf{Tiempo vs. m, n=200\,000}:
 \texttt{\seqsplit{scripts/ejecutar\_corridas\_largas.ps1}} (punto 1) y luego
-\texttt{\seqsplit{python scripts/generar\_figuras.py tiempo\_vs\_m}}.
+\texttt{python scripts/generar\_figuras.py tiempo\_vs\_m}.
 \item El resto de figuras y tablas (convergencia, mapas de calor,
 aceleración por hilos, memoria por componente, tours finales) se generan
 con las funciones correspondientes de \texttt{\seqsplit{scripts/generar\_figuras.py}},
