@@ -22,10 +22,12 @@ informe/*.fls
 informe/*.fdb_latexmk
 informe/*.synctex.gz
 
-# tours grandes y temporales
+# tours grandes y temporales (los tours pequenos, n=20 y n=2000, si se
+# versionan porque sirven para reproducir la Figura 11 sin recorrer nada)
 *.tour
 *.tmp
 resultados/log_*.txt
+resultados/tour_n200000.csv
 docs/_*
 
 # documentos de planificacion que nombran herramientas de IA por su marca;

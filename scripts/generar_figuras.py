@@ -310,6 +310,18 @@ def fig_aceleracion_hilos():
     ax1.set_title("Aceleración y eficiencia vs. número de hilos (n=2\\,000)".replace("\\,", " "))
     _guardar_fig(fig, "07_aceleracion_hilos.png")
 
+    tabla = (
+        "\\begin{table}[H]\\centering\n"
+        "\\caption{Aceleración y eficiencia vs. número de hilos, n=2\\,000, 3 semillas.}\n"
+        "\\label{tab:aceleracion}\n"
+        "\\begin{tabular}{rrrr}\\toprule\n"
+        "Hilos & Tiempo medio (s) & Aceleración & Eficiencia \\\\\\midrule\n"
+        + "\n".join(f"{int(r.hilos)} & {_fmt(r.t_aco_s)} & {_fmt(r.aceleracion)} & {_fmt(r.eficiencia)} \\\\"
+                     for r in g.itertuples()) +
+        "\n\\bottomrule\\end{tabular}\\end{table}\n"
+    )
+    _guardar_tabla("aceleracion_hilos.tex", tabla)
+
 
 # ---------------------------------------------------------------- Figura 6b: tiempo vs n (escalamiento)
 def fig_tiempo_vs_n():

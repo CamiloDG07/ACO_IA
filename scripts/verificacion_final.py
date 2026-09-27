@@ -41,7 +41,10 @@ def main():
     # .gitignore es la excepcion esperada: solo referencia el nombre de un
     # archivo excluido (ver docs/bitacora.md), no menciona la herramienta
     # como autora de nada.
-    archivos = [f for f in out.splitlines() if not f.startswith("docs/PROMPT_") and f != ".gitignore"]
+    # scripts/verificacion_final.py tambien se excluye: su propio patron de
+    # busqueda contiene esas palabras como texto de deteccion, no como mencion.
+    excluidos = {".gitignore", "scripts/verificacion_final.py"}
+    archivos = [f for f in out.splitlines() if not f.startswith("docs/PROMPT_") and f not in excluidos]
     for archivo in archivos:
         ruta = os.path.join(RAIZ, archivo)
         if not os.path.isfile(ruta):

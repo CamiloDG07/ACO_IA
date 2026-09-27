@@ -108,15 +108,15 @@ rastro de feromona en el camino corto crece más rápido; esto es
 \textbf{estigmergia}: coordinación indirecta entre agentes a través de
 cambios que cada uno deja en el ambiente, sin que haya comunicación directa
 entre ellos. El comportamiento colectivo (converger al camino corto) es
-\emph{emergente}: ninguna hormiga individual "sabe" cuál es el camino más
+\emph{emergente}: ninguna hormiga individual ``sabe'' cuál es el camino más
 corto, pero el sistema completo lo encuentra.
 
 \paragraph{Representación del problema.} El TSP se representa como un grafo
 completo de $n$ ciudades, con una distancia $d_{ij}$ entre cada par $(i,j)$
 (euclidiana, en este trabajo). Cada arista $(i,j)$ tiene, además de su
 distancia, un valor de feromona $\tau_{ij}$ que el algoritmo actualiza en
-cada iteración; $\tau_{ij}$ alto significa "muchas hormigas buenas pasaron
-por aquí en el pasado reciente".
+cada iteración; $\tau_{ij}$ alto significa ``muchas hormigas buenas pasaron
+por aquí en el pasado reciente''.
 
 \paragraph{Regla de transición y ruleta.} En cada paso de construcción, una
 hormiga que está en la ciudad $i$ elige la siguiente ciudad $j$, entre las
@@ -151,7 +151,7 @@ Primero se evapora una fracción $\rho$ de cada rastro:
 \tau_{ij} \leftarrow (1-\rho)\,\tau_{ij},
 \label{eq:evaporacion}
 \end{equation}
-lo que permite "olvidar" decisiones tomadas hace muchas iteraciones y evita
+lo que permite ``olvidar'' decisiones tomadas hace muchas iteraciones y evita
 que la feromona crezca sin límite. Después, cada hormiga $k$ deposita
 feromona proporcional a la calidad de su tour:
 \begin{equation}
@@ -388,13 +388,13 @@ calidad de usar más hormigas por iteración.
 
 \paragraph{Aclaración.} 20\,000 es una decisión de ingeniería para esta
 máquina y este equipo, no un óptimo teórico. Dorigo y Stützle (2004, p.~217,
-sección 5.7.6) señalan que "el mejor valor de $m$ es función del algoritmo
+sección 5.7.6) señalan que ``el mejor valor de $m$ es función del algoritmo
 ACO particular y de la clase de problemas atacados, y la mayoría de las
-veces debe fijarse experimentalmente".
+veces debe fijarse experimentalmente''.
 
 \subsection{Estructuras de datos y estrategias de ahorro}
 \label{sec:estrategias}
-La razón central del enunciado ("mostrar cómo ahorrar recursos") se resuelve
+La razón central del enunciado (``mostrar cómo ahorrar recursos'') se resuelve
 en la representación de datos, no en un truco aislado. La Tabla~\ref{tab:estrategias}
 resume las diez estrategias implementadas, cada una con su motivo, su costo
 antes y después, y la medición que la respalda (detalle completo en
@@ -591,6 +591,29 @@ gradual: al haber más ciudades y más pasos por tour, cada iteración aporta
 información más fina, y la mejora se reparte en más iteraciones antes de
 aplanarse.
 
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.48\textwidth]{04_heatmap_alpha_beta.png}
+\includegraphics[width=0.48\textwidth]{04_heatmap_rho_qfac.png}
+\caption{Superficie de calidad media, n=2\,000, 3 semillas por celda: alpha $\times$ beta (izquierda) y rho $\times$ qfac (derecha).}
+\label{fig:heatmaps}
+\end{figure}
+\textbf{Cómo leer esta figura:} cada celda es la longitud media del mejor
+tour para esa combinación de parámetros (más oscuro/morado es peor, más
+claro/amarillo es mejor). El mapa alpha-beta muestra que \textbf{beta}
+domina: la calidad mejora de forma consistente de arriba (beta=1) hacia
+abajo (beta=8), casi sin importar la columna (alpha), mientras que alpha
+por sí solo cambia poco la calidad dentro de cada fila. Esto es coherente
+con la teoría: beta pesa la heurística (distancia), que en un TSP euclidiano
+es información muy confiable desde la primera iteración, mientras que alpha
+pesa la feromona, que recién se vuelve informativa después de varias
+iteraciones. El mapa rho-qfac muestra una superficie mucho más plana (rango de apenas
+37,2 a 38,0): ninguno de los dos domina con la fuerza de beta, y la mejor
+zona (qfac bajo a moderado, rho moderado a alto) es ancha, no un único
+punto aislado — el algoritmo, en esta instancia, es razonablemente robusto
+a estos dos parámetros en concreto (observación de este trabajo, no una
+cita de la literatura).
+
 \subsection{n = 200 000}
 Configuración ganadora, 3 semillas, dos corridas con el mismo presupuesto de
 tiempo de reloj (\textasciitilde15 min/semilla) pero distinto número de
@@ -610,6 +633,19 @@ configuraciones quedan lejos del óptimo, esperable con tan pocas
 iteraciones sobre 200\,000 ciudades) sino la comparación entre ellas: ver
 sección~\ref{sec:tiempo-memoria}.
 
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.7\textwidth]{02_convergencia_n200000.png}
+\caption{Convergencia (mejor global vs. iteración), n=200\,000, m=20\,000, 3 semillas.}
+\label{fig:convergencia-n200000}
+\end{figure}
+\textbf{Cómo leer esta figura:} solo 10 iteraciones, muy pocas frente a las
+50-100 usadas en $n=20$ y $n=2\,000$; la curva todavía cae con pendiente
+notable en la última iteración graficada, es decir, el algoritmo no llegó a
+aplanarse — coherente con la discusión de la sección~\ref{sec:tiempo-memoria}
+sobre qué tan lejos se puede llegar con el presupuesto de tiempo de esta
+máquina.
+
 % ====================================================================
 \section{Análisis de tiempo y memoria}
 \label{sec:tiempo-memoria}
@@ -626,7 +662,7 @@ calculada más allá) crece como $n^2$ y cruza la RAM disponible de la
 máquina (15,88 GB) alrededor de $n\approx 63\,000$; la línea dispersa crece
 de forma mucho más lenta ($O(nK)$) y sigue siendo de decenas de MB incluso
 en $n=200\,000$. Esta es la comprobación empírica directa de por qué el
-enunciado pide "ahorrar recursos": sin la lista de $K$ candidatas, la
+enunciado pide ``ahorrar recursos'': sin la lista de $K$ candidatas, la
 instancia más grande de este trabajo sería, sencillamente, irrealizable en
 esta máquina.
 
@@ -670,7 +706,7 @@ regla general sobre $K$.
 \end{figure}
 \textbf{Cómo leer esta figura:} misma comparación apareada de la
 sección~\ref{sec:numero-agentes} (Wilcoxon, $p=0{,}0078$), mostrada como
-diagrama de caja: la caja "con segunda feromona" está desplazada hacia
+diagrama de caja: la caja ``con segunda feromona'' está desplazada hacia
 longitudes menores, con una dispersión similar a la de la configuración sin
 ella, es decir, la mejora no viene a costa de más varianza entre semillas.
 
@@ -724,16 +760,55 @@ argumento que la Figura~\ref{fig:memoria-densa-dispersa} hace en memoria.
 
 \subsection{Igual presupuesto de cómputo en n = 200 000}
 Ver la tabla~\ref{tab:igual_presupuesto} y la discusión de la
-sección~\ref{sec:numero-agentes}, párrafo "Respaldo empírico": con el mismo
+sección~\ref{sec:numero-agentes}, párrafo ``Respaldo empírico'': con el mismo
 tiempo de reloj, $m=2\,048$ (más iteraciones) superó a $m=20\,000$ (menos
 iteraciones) en las tres semillas probadas.
 
 \subsection{Aceleración y eficiencia por número de hilos}
-\emph{Pendiente: se completa con
-\texttt{scripts/experimentos\_fase3\_figuras.py} (aceleración por hilos,
-1/2/4/6/12), que se ejecuta después de cerrado el bloque C para no
-contaminar sus mediciones de tiempo. La derivación teórica (ley de Amdahl)
-ya está en la sección~\ref{sec:complejidad}.}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.7\textwidth]{07_aceleracion_hilos.png}
+\caption{Aceleración y eficiencia vs. número de hilos, n=2\,000, 3 semillas.}
+\label{fig:aceleracion}
+\end{figure}
+\input{tablas/aceleracion_hilos.tex}
+\textbf{Cómo leer esta figura:} la aceleración medida ($t_1/t_p$) queda por
+debajo de la ideal ($t_1/p$, la diagonal punteada) desde el primer punto: con
+12 hilos la aceleración es de apenas 5,06$\times$ (eficiencia 42,2\,\%), muy
+lejos de 12$\times$. Dos razones, ambas consistentes con la
+sección~\ref{sec:complejidad}: (1) la CPU de esta máquina tiene 6 núcleos
+físicos y 12 hilos lógicos (\emph{hyperthreading}); pasar de 6 a 12 hilos
+comparte unidades de ejecución dentro de cada núcleo físico, así que la
+ganancia marginal es mucho menor que duplicar núcleos reales (la eficiencia
+ya cae de 62\,\% en 6 hilos a 42\,\% en 12); (2) el algoritmo es intensivo en
+accesos a memoria (lectura de vecinas, distancias y feromona por cada paso
+de cada hormiga), y con más hilos compitiendo por el mismo ancho de banda de
+memoria, cada hilo individual avanza más lento de lo que avanzaría solo. La
+parte secuencial de cada iteración (evaporación, recálculo de pesos,
+actualización del mejor global) explicaría, por la ley de Amdahl, una cota
+superior a la aceleración, pero es pequeña frente al costo de construcción;
+la brecha observada aquí es demasiado grande para explicarse solo por esa
+parte secuencial, lo que apunta al límite de ancho de banda de memoria como
+la causa principal.
+
+\subsection{Tours finales}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.32\textwidth]{11_tour_n20.png}
+\includegraphics[width=0.32\textwidth]{11_tour_n2000.png}
+\includegraphics[width=0.32\textwidth]{11_tour_n200000_fragmento.png}
+\caption{Tour final de n=20 y n=2\,000, y un fragmento ampliado (recorte de $\pm$0,05 alrededor del centro) del tour de n=200\,000.}
+\label{fig:tours}
+\end{figure}
+\textbf{Cómo leer esta figura:} verificación visual de que el tour es
+coherente (sin cruces evidentes ni saltos absurdos) para $n=20$ y
+$n=2\,000$. El fragmento de $n=200\,000$ corresponde a una corrida corta e
+ilustrativa (11 iteraciones, no la corrida oficial de la
+sección~\ref{sec:tiempo-memoria}), y muestra líneas largas que cruzan el
+recorte: con pocas iteraciones sobre una instancia tan densa, el tour todavía
+no termina de ``localizarse'' dentro de cada vecindario denso de ciudades, algo
+consistente con la limitación de calidad-con-pocas-iteraciones discutida en
+la sección de limitaciones.
 
 % ====================================================================
 \section{Discusión}
@@ -836,7 +911,7 @@ práctica de este equipo, con esta máquina y este tiempo disponible, no es
 ejecutable para $n=200\,000$; el tope adoptado ($m=20\,000$) es una decisión
 de ingeniería explícita, no una regla universal. La comparación directa a
 igual presupuesto de tiempo en $n=200\,000$ (sección~\ref{sec:tiempo-memoria})
-incluso sugiere lo contrario de la intuición de "más hormigas es mejor":
+incluso sugiere lo contrario de la intuición de ``más hormigas es mejor'':
 con el mismo tiempo de reloj, más iteraciones con menos hormigas
 ($m=2\,048$) dieron mejor calidad que menos iteraciones con más hormigas
 ($m=20\,000$), en las tres semillas probadas.
@@ -850,8 +925,8 @@ descartar otros lenguajes por incapacidad: C y Rust habrían sido, en
 principio, igual de aptos.
 \end{enumerate}
 
-\emph{(Este listado se revisa al cerrar el bloque C con los hallazgos
-definitivos de $n=200\,000$; ver \texttt{docs/RESUMEN\_FINAL.md}.)}
+Ver \texttt{docs/RESUMEN\_FINAL.md} para el resumen ejecutivo de todo el
+proyecto, incluidas las corridas del bloque de cierre.
 
 % ====================================================================
 \section{Referencias}
