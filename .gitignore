@@ -3,15 +3,21 @@ __pycache__/
 .ipynb_checkpoints/
 .venv/
 
-# binarios compilados
+# binarios y objetos de compilacion
 *.exe
 *.o
 *.obj
 *.pdb
+*.ilk
 /src/aco_tsp
 /src/aco_denso
+build/
+Debug/
+Release/
+x64/
+x86/
 
-# LaTeX intermedio; el PDF final si se versiona (excepcion mas abajo)
+# LaTeX intermedio; el PDF y el .tex fuente si se versionan (excepcion mas abajo)
 informe/*.pdf
 !informe/informe.pdf
 informe/*.aux
@@ -21,6 +27,8 @@ informe/*.toc
 informe/*.fls
 informe/*.fdb_latexmk
 informe/*.synctex.gz
+informe/*.lof
+informe/*.lot
 
 # tours grandes y temporales (los tours pequenos, n=20 y n=2000, si se
 # versionan porque sirven para reproducir la Figura 11 sin recorrer nada)
