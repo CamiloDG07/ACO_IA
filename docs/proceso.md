@@ -84,9 +84,22 @@ no depender del PATH del sistema.
 
 ## 8. Escalamiento, gráficas e informe
 
-*(Se completa al cerrar el bloque de corridas largas y de gráficas; ver
-`docs/RESUMEN_FINAL.md` para el estado definitivo y las fechas exactas de
-esta parte, ejecutada en modo autónomo mientras el estudiante dormía.)*
+Con el estudiante dormido, se ejecutó de un tirón el resto del proyecto en
+modo autónomo (27 de septiembre de 2026, madrugada): se cerraron las
+corridas cortas que faltaban (n=20 contra Held-Karp con 5 semillas,
+selección estadística de la configuración con segunda feromona, curvas de
+convergencia); se lanzaron las corridas largas de n=200 000 bajo un
+envoltorio que evita que Windows suspenda el equipo (04:41 a 06:14, 92
+minutos, sin ninguna señal de desaceleración térmica en 354 iteraciones);
+se generaron los mapas de calor alpha-beta y rho-qfac, la aceleración por
+hilos (1/2/4/6/12) y los tours finales; y se escribió el informe completo
+en LaTeX (28 páginas, compila sin errores), con todas las tablas y figuras
+generadas por script a partir de los CSV de `resultados/`, sin copiar
+ningún número a mano. El hallazgo más importante de este tramo — que a
+igual presupuesto de tiempo, `m=2 048` con más iteraciones superó a
+`m=20 000` con menos iteraciones, en las tres semillas probadas — no estaba
+anticipado y se documentó tal como salió, sin ajustar la narrativa previa
+del proyecto para que encajara mejor.
 
 ## 9. Limitaciones
 
