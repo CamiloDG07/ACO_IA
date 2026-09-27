@@ -90,7 +90,8 @@ def fig_factorial():
         "\\caption{Recorridos posibles $(n-1)!/2$, calculado con \\texttt{lgamma}.}\n"
         "\\label{tab:factorial}\n"
         "\\begin{tabular}{rrr}\\toprule\n"
-        "$n$ & $(n-1)!/2$ & $\\log_{10}$ \\\\\\midrule\n"
+        "\\rowcolor{gray!25}\n"
+        "\\textbf{$n$} & \\textbf{$(n-1)!/2$} & \\textbf{$\\log_{10}$} \\\\\\midrule\n"
         f"{filas}\n\\bottomrule\\end{{tabular}}\\end{{table}}\n"
     )
     _guardar_tabla("factorial.tex", tabla)
@@ -114,7 +115,8 @@ def tabla_resultados_n20():
         "\\caption{n=20 contra Held-Karp, m=20, K=19, 5 semillas.}\n"
         "\\label{tab:n20}\n"
         "\\begin{tabular}{rrrrc}\\toprule\n"
-        "Semilla & $L_{mejor}$ & Óptimo exacto & Gap (\\%) & Tour válido \\\\\\midrule\n"
+        "\\rowcolor{gray!25}\n"
+        "\\textbf{Semilla} & \\textbf{$L_{mejor}$} & \\textbf{Óptimo exacto} & \\textbf{Gap (\\%)} & \\textbf{Tour válido} \\\\\\midrule\n"
         f"{filas}\n\\bottomrule\\end{{tabular}}\\\\[0.3em]\n"
         f"{{\\footnotesize {resumen}}}\n"
         "\\end{table}\n"
@@ -131,7 +133,8 @@ def tabla_resultados_n2000():
         "\\caption{n=2\\,000, configuración ganadora, m=2\\,000, K=8, 8 semillas.}\n"
         "\\label{tab:n2000}\n"
         "\\begin{tabular}{rrrr}\\toprule\n"
-        "Media $L_{mejor}$ & Desv. estándar & Mínimo & Máximo \\\\\\midrule\n"
+        "\\rowcolor{gray!25}\n"
+        "\\textbf{Media $L_{mejor}$} & \\textbf{Desv. estándar} & \\textbf{Mínimo} & \\textbf{Máximo} \\\\\\midrule\n"
         f"{_fmt(L.mean())} & {_fmt(L.std())} & {_fmt(L.min())} & {_fmt(L.max())} \\\\\n"
         "\\bottomrule\\end{tabular}\\end{table}\n"
     )
@@ -190,7 +193,8 @@ def fig_tiempo_vs_m():
         "\\caption{Tiempo de una iteración vs. m, n=200\\,000, K=8 (3 repeticiones).}\n"
         "\\label{tab:costo_m}\n"
         "\\begin{tabular}{rrr}\\toprule\n"
-        "$m$ & Tiempo medio (s) & Desv. estándar (s) \\\\\\midrule\n"
+        "\\rowcolor{gray!25}\n"
+        "\\textbf{$m$} & \\textbf{Tiempo medio (s)} & \\textbf{Desv. estándar (s)} \\\\\\midrule\n"
         + "\n".join(f"{int(r.m)} & {_fmt(r.mean)} & {_fmt(r.std)} \\\\" for r in g.itertuples()) +
         f"\n\\bottomrule\\end{{tabular}}\\\\[0.3em]\n"
         f"\\footnotesize Ajuste: $t(m)\\approx {_fmt(a, 6)}\\,m {'+' if b>=0 else '-'} {_fmt(abs(b), 3)}$ s, "
@@ -315,7 +319,8 @@ def fig_aceleracion_hilos():
         "\\caption{Aceleración y eficiencia vs. número de hilos, n=2\\,000, 3 semillas.}\n"
         "\\label{tab:aceleracion}\n"
         "\\begin{tabular}{rrrr}\\toprule\n"
-        "Hilos & Tiempo medio (s) & Aceleración & Eficiencia \\\\\\midrule\n"
+        "\\rowcolor{gray!25}\n"
+        "\\textbf{Hilos} & \\textbf{Tiempo medio (s)} & \\textbf{Aceleración} & \\textbf{Eficiencia} \\\\\\midrule\n"
         + "\n".join(f"{int(r.hilos)} & {_fmt(r.t_aco_s)} & {_fmt(r.aceleracion)} & {_fmt(r.eficiencia)} \\\\"
                      for r in g.itertuples()) +
         "\n\\bottomrule\\end{tabular}\\end{table}\n"
@@ -420,7 +425,8 @@ def fig_longitud_vs_referencias():
         "\\caption{Longitud del mejor tour contra óptimo exacto (n=20) y aproximación BHH (n grande).}\n"
         "\\label{tab:longitud_referencias}\n"
         "\\begin{tabular}{lrrr}\\toprule\n"
-        "Instancia & $L_{ACO}$ & Óptimo exacto & Aprox. BHH \\\\\\midrule\n"
+        "\\rowcolor{gray!25}\n"
+        "\\textbf{Instancia} & \\textbf{$L_{ACO}$} & \\textbf{Óptimo exacto} & \\textbf{Aprox. BHH} \\\\\\midrule\n"
         + "\n".join(lineas) +
         "\n\\bottomrule\\end{tabular}\\end{table}\n"
     )

@@ -8,16 +8,22 @@
 \usepackage{fancyhdr}
 \usepackage{titlesec}
 \usepackage{booktabs}
-\usepackage{xcolor}
+\usepackage[table]{xcolor}
 \usepackage{verbatim}
 \usepackage{mathptmx}
 \usepackage{setspace}
 \usepackage{xurl}
 \usepackage{amsmath}
+\usepackage{seqsplit}
+\usepackage{microtype}
 
 \geometry{top=2.5cm, bottom=2.5cm, left=3cm, right=3cm}
 \hypersetup{colorlinks=true, linkcolor=black, urlcolor=blue, citecolor=black}
 \graphicspath{{../figuras/}}
+% Franjas de color alternadas para todas las tablas (fila 1 = encabezado,
+% se colorea a mano con \rowcolor{gray!25} en cada tabla; filas de datos
+% desde la 2 en adelante alternan con este comando global).
+\rowcolors{2}{gray!8}{white}
 
 \pagestyle{fancy}
 \fancyhf{}
@@ -97,95 +103,6 @@ ahorro de tiempo y memoria, la metodología experimental, los resultados por
 instancia y sus límites honestos.
 
 % ====================================================================
-\section{Marco teórico}
-La optimización por colonia de hormigas se inspira en un fenómeno biológico
-simple: las hormigas reales no ven el camino más corto entre el hormiguero y
-una fuente de comida, pero lo encuentran de forma colectiva porque cada
-hormiga deja un rastro de feromona al caminar, y las hormigas siguientes
-tienden a preferir los caminos con más feromona. Como los caminos cortos se
-recorren (y se refuerzan) más veces por unidad de tiempo que los largos, el
-rastro de feromona en el camino corto crece más rápido; esto es
-\textbf{estigmergia}: coordinación indirecta entre agentes a través de
-cambios que cada uno deja en el ambiente, sin que haya comunicación directa
-entre ellos. El comportamiento colectivo (converger al camino corto) es
-\emph{emergente}: ninguna hormiga individual ``sabe'' cuál es el camino más
-corto, pero el sistema completo lo encuentra.
-
-\paragraph{Representación del problema.} El TSP se representa como un grafo
-completo de $n$ ciudades, con una distancia $d_{ij}$ entre cada par $(i,j)$
-(euclidiana, en este trabajo). Cada arista $(i,j)$ tiene, además de su
-distancia, un valor de feromona $\tau_{ij}$ que el algoritmo actualiza en
-cada iteración; $\tau_{ij}$ alto significa ``muchas hormigas buenas pasaron
-por aquí en el pasado reciente''.
-
-\paragraph{Regla de transición y ruleta.} En cada paso de construcción, una
-hormiga que está en la ciudad $i$ elige la siguiente ciudad $j$, entre las
-no visitadas, con probabilidad
-\begin{equation}
-p^k_{ij} = \frac{\tau_{ij}^{\alpha}\,\eta_{ij}^{\beta}}
-{\displaystyle\sum_{l \in N^k_i} \tau_{il}^{\alpha}\,\eta_{il}^{\beta}},
-\qquad \eta_{ij} = \frac{1}{d_{ij}},
-\label{eq:transicion}
-\end{equation}
-donde $N^k_i$ es el conjunto de ciudades que la hormiga $k$ aún no ha
-visitado (o, en la versión dispersa de este trabajo, la lista de $K$
-vecinas más cercanas de $i$ que aún no se visitaron), $\eta_{ij}$ es la
-\textbf{heurística}: entre más cerca esté una ciudad, más atractiva es, con
-independencia de la feromona. Los parámetros $\alpha$ y $\beta$ controlan
-cuánto pesa la feromona frente a la heurística: con $\alpha=0$ solo importa
-la distancia (un vecino más cercano estocástico); con $\beta=0$ solo importa
-la feromona acumulada, lo que típicamente lleva a estancamiento (todas las
-hormigas convergen al mismo tour, así no sea bueno). La ecuación~
-\eqref{eq:transicion} no elige siempre la arista de mayor peso: se implementa
-como una \textbf{ruleta}, es decir, se recorre la lista de candidatas
-acumulando sus pesos hasta superar un número aleatorio en $[0, \text{suma
-total})$; así, una arista con el doble de peso que otra tiene el doble de
-probabilidad de salir elegida, pero no una certeza. Esa aleatoriedad
-controlada es la que permite explorar en vez de repetir siempre el mismo
-camino.
-
-\paragraph{Evaporación y depósito.} Al terminar de construir sus tours todas
-las hormigas de una iteración, la feromona se actualiza en dos pasos.
-Primero se evapora una fracción $\rho$ de cada rastro:
-\begin{equation}
-\tau_{ij} \leftarrow (1-\rho)\,\tau_{ij},
-\label{eq:evaporacion}
-\end{equation}
-lo que permite ``olvidar'' decisiones tomadas hace muchas iteraciones y evita
-que la feromona crezca sin límite. Después, cada hormiga $k$ deposita
-feromona proporcional a la calidad de su tour:
-\begin{equation}
-\Delta\tau^k_{ij} = \frac{Q}{L_k} \quad \text{si la hormiga $k$ usó la
-arista $(i,j)$}, \qquad \tau_{ij} \leftarrow \tau_{ij} + \sum_k
-\Delta\tau^k_{ij},
-\label{eq:deposito}
-\end{equation}
-donde $L_k$ es la longitud del tour de la hormiga $k$: entre más corto el
-tour, mayor el depósito. $Q$ se normaliza en este trabajo como
-$Q = q_{fac} \cdot L_{nn}/m$ ($L_{nn}$: longitud de un tour por vecino más
-cercano), para que el depósito no dependa de la escala arbitraria de las
-coordenadas ni del número de hormigas.
-
-\paragraph{Exploración y explotación.} $\alpha$, $\beta$ y $\rho$ controlan
-el equilibrio entre repetir lo que ya funcionó (explotación) y probar
-caminos distintos (exploración). $\alpha$ alto amplifica la feromona
-acumulada y favorece la explotación (riesgo: estancamiento prematuro);
-$\beta$ alto favorece los vecinos cercanos sin importar la feromona
-(riesgo: ignorar información útil de iteraciones pasadas); $\rho$ alto
-olvida rápido el pasado (más exploración, pero también más varianza entre
-corridas). Este trabajo agrega, de forma opcional, una \textbf{segunda capa
-de feromona} $\tau_2$, reforzada solo por el mejor tour global de cada
-iteración, con un exponente $\alpha_2 < \alpha$ para que su influencia sea
-menor que la de la feromona principal; el peso final de cada arista es
-$w_{ij} = \tau_{ij}^{\alpha}\,\tau_{2,ij}^{\alpha_2}\,\eta_{ij}^{\beta}$.
-
-\paragraph{Criterios de parada.} El algoritmo se detiene por el primero de
-tres criterios que se cumpla: un número máximo de iteraciones, un
-presupuesto de tiempo total, o un número de iteraciones consecutivas sin
-mejorar el mejor global (\emph{stall}). Los tres se comparan en la
-sección~\ref{sec:metodologia}.
-
-% ====================================================================
 \section{Descripción del problema y espacio de búsqueda factorial}
 \label{sec:espacio-factorial}
 En un TSP simétrico ($d_{ij}=d_{ji}$) con origen fijo (siempre se empieza en
@@ -228,6 +145,23 @@ casos que son referencias, no el óptimo.
 
 % ====================================================================
 \section{Diseño de la solución}
+Antes de justificar cada decisión concreta de este diseño (lenguaje,
+número de agentes, estructuras de datos), vale explicar por qué un algoritmo
+como ACO funciona: se inspira en un fenómeno biológico simple. Las hormigas
+reales no ven el camino más corto entre el hormiguero y una fuente de
+comida, pero lo encuentran de forma colectiva porque cada hormiga deja un
+rastro de feromona al caminar, y las hormigas siguientes tienden a preferir
+los caminos con más feromona. Como los caminos cortos se recorren (y se
+refuerzan) más veces por unidad de tiempo que los largos, el rastro de
+feromona en el camino corto crece más rápido; esto es \textbf{estigmergia}:
+coordinación indirecta entre agentes a través de cambios que cada uno deja
+en el ambiente, sin que haya comunicación directa entre ellos. El
+comportamiento colectivo (converger al camino corto) es \emph{emergente}:
+ninguna hormiga individual ``sabe'' cuál es el camino más corto, pero el
+sistema completo lo encuentra. Esta idea es la que justifica, más adelante,
+por qué el diseño no necesita coordinar las hormigas entre sí durante la
+construcción (sección~\ref{sec:estrategias}) ni por qué una sola capa de
+feromona alcanza en la mayoría de los casos (sección~\ref{sec:numero-agentes}).
 
 \subsection{Elección de lenguaje}
 El proyecto se implementa en C++20 con OpenMP; no se implementó nada en
@@ -265,6 +199,7 @@ expectativa razonada, no un resultado medido en este trabajo.
 \footnotesize
 \begin{tabular}{p{2.3cm}p{3.3cm}p{3.3cm}p{3.3cm}}
 \toprule
+\rowcolor{gray!25}
 \textbf{Criterio} & \textbf{C++} & \textbf{Rust} & \textbf{C} \\
 \midrule
 Velocidad final & Equivalente a C con buen uso del compilador & Equivalente, mismo backend LLVM/GCC de bajo nivel & Equivalente, es la base de comparación \\
@@ -306,6 +241,45 @@ librería estándar de C++ da de fábrica (vectores, atómicos, ordenación).
 Ver \texttt{docs/decisiones\_diseno.md} para la tabla completa de la
 decisión.
 
+\subsection{Construcción del tour}
+\label{sec:construccion-tour}
+Esta subsección describe la parte del código (\texttt{buildTour} en
+\texttt{src/aco\_tsp.cpp}) que cada hormiga ejecuta para armar un tour, y
+las fórmulas exactas que implementa. El TSP se representa como un grafo
+completo de $n$ ciudades, con una distancia $d_{ij}$ entre cada par $(i,j)$
+(euclidiana, en este trabajo). Cada arista $(i,j)$ tiene, además de su
+distancia, un valor de feromona $\tau_{ij}$ que el algoritmo actualiza en
+cada iteración; $\tau_{ij}$ alto significa ``muchas hormigas buenas pasaron
+por aquí en el pasado reciente''.
+
+En cada paso de construcción, una hormiga que está en la ciudad $i$ elige la
+siguiente ciudad $j$, entre las no visitadas, con probabilidad
+\begin{equation}
+p^k_{ij} = \frac{\tau_{ij}^{\alpha}\,\eta_{ij}^{\beta}}
+{\displaystyle\sum_{l \in N^k_i} \tau_{il}^{\alpha}\,\eta_{il}^{\beta}},
+\qquad \eta_{ij} = \frac{1}{d_{ij}},
+\label{eq:transicion}
+\end{equation}
+donde $N^k_i$ es el conjunto de ciudades que la hormiga $k$ aún no ha
+visitado (o, en la versión dispersa de este trabajo, la lista de $K$
+vecinas más cercanas de $i$ que aún no se visitaron, ver
+sección~\ref{sec:estrategias}), y $\eta_{ij}$ es la \textbf{heurística}:
+entre más cerca esté una ciudad, más atractiva es, con independencia de la
+feromona. Los parámetros $\alpha$ y $\beta$ controlan cuánto pesa la
+feromona frente a la heurística: con $\alpha=0$ solo importa la distancia
+(un vecino más cercano estocástico); con $\beta=0$ solo importa la
+feromona acumulada, lo que típicamente lleva a estancamiento (todas las
+hormigas convergen al mismo tour, así no sea bueno). La
+ecuación~\eqref{eq:transicion} no elige siempre la arista de mayor peso: el
+código la implementa como una \textbf{ruleta}, es decir, recorre la lista de
+candidatas acumulando sus pesos hasta superar un número aleatorio en
+$[0, \text{suma total})$; así, una arista con el doble de peso que otra
+tiene el doble de probabilidad de salir elegida, pero no una certeza. Esa
+aleatoriedad controlada es la que permite explorar en vez de repetir
+siempre el mismo camino, y es la razón de fondo de por qué dos corridas con
+distinta semilla (misma configuración) dan tours distintos, como se ve en
+las curvas de convergencia de la sección~\ref{sec:resultados}.
+
 \subsection{Número de agentes}
 \label{sec:numero-agentes}
 Se adopta $m = \min(n, 20\,000)$: $n=20$ con $m=20$; $n=2\,000$ con
@@ -325,7 +299,7 @@ artículos originales por no haberlos verificado directamente.
 una iteración cuesta $O(m n K)$; con $m=n$ pasa a $O(n^2 K)$. El tiempo
 medido en esta máquina para una iteración en $n=200\,000$, $K=8$, con la
 configuración ganadora (3 repeticiones cada una,
-\texttt{resultados/costo\_m\_n200000\_3reps.csv})
+\texttt{\seqsplit{resultados/costo\_m\_n200000\_3reps.csv}})
 fue de 0,850~s ($m=200$), 8,681~s ($m=2\,000$) y 86,940~s ($m=20\,000$). El
 ajuste lineal por mínimos cuadrados da $t(m) \approx 0{,}004348\,m -
 0{,}017$ segundos, con $R^2 = 1{,}000000$. \textbf{Como estimación por
@@ -359,14 +333,15 @@ costo de cómputo casi 1\,080 veces mayor.
 
 La comparación a igual presupuesto de cómputo en $n=200\,000$ ($m=2\,048$
 contra $m=20\,000$, ~15 minutos de reloj por semilla, 3 semillas;
-\texttt{resultados/resultado\_n200000\_punto5.csv} y
-\texttt{..\_punto6.csv}) sí se completó:
+\texttt{\seqsplit{resultados/resultado\_n200000\_punto5.csv}} y
+\texttt{\seqsplit{resultados/resultado\_n200000\_punto6.csv}}) sí se completó:
 
 \begin{table}[H]\centering
 \caption{Igual presupuesto de tiempo en n=200\,000: m=20\,000 (10 iteraciones) contra m=2\,048 (\textasciitilde108 iteraciones).}
 \label{tab:igual_presupuesto}
 \begin{tabular}{lrrrr}\toprule
-Configuración & Iteraciones & $L_{mejor}$ media & Desv. estándar & Mejora vs. NN \\\midrule
+\rowcolor{gray!25}
+\textbf{Configuración} & \textbf{Iteraciones} & \textbf{$L_{mejor}$ media} & \textbf{Desv. estándar} & \textbf{Mejora vs. NN} \\\midrule
 $m=20\,000$ & 10 & 387,308 & 0,190 & 1,28\,\% \\
 $m=2\,048$ & $\approx$108 & 385,485 & 0,550 & 1,75\,\% \\
 \bottomrule\end{tabular}
@@ -408,6 +383,40 @@ arreglo (localidad de caché). Ninguna hormiga guarda su tour completo: cada
 hilo reutiliza un único buffer y deposita feromona con operaciones atómicas
 al terminar, así que la memoria no depende de $m$.
 
+Esa actualización de feromona, que en el código ocurre una sola vez por
+iteración (relevante para la discusión de la sección~\ref{sec:numero-agentes}
+sobre el costo de $m$), sigue dos pasos. Primero se evapora una fracción
+$\rho$ de cada rastro:
+\begin{equation}
+\tau_{ij} \leftarrow (1-\rho)\,\tau_{ij},
+\label{eq:evaporacion}
+\end{equation}
+lo que permite ``olvidar'' decisiones tomadas hace muchas iteraciones y evita
+que la feromona crezca sin límite; esta evaporación es, precisamente, el
+recorrido de $O(nK)$ mencionado como parte del costo de una iteración
+(sección~\ref{sec:complejidad}). Después, cada hormiga $k$ deposita
+feromona proporcional a la calidad de su tour:
+\begin{equation}
+\Delta\tau^k_{ij} = \frac{Q}{L_k} \quad \text{si la hormiga $k$ usó la
+arista $(i,j)$}, \qquad \tau_{ij} \leftarrow \tau_{ij} + \sum_k
+\Delta\tau^k_{ij},
+\label{eq:deposito}
+\end{equation}
+donde $L_k$ es la longitud del tour de la hormiga $k$: entre más corto el
+tour, mayor el depósito. $Q$ se normaliza en este trabajo como
+$Q = q_{fac} \cdot L_{nn}/m$ ($L_{nn}$: longitud de un tour por vecino más
+cercano), para que el depósito no dependa de la escala arbitraria de las
+coordenadas ni del número de hormigas; esta normalización es la que hace
+comparables los valores de \texttt{qfac} usados en el barrido de parámetros
+(sección~\ref{sec:metodologia}) entre instancias de tamaño distinto. Este
+trabajo agrega, de forma opcional, una \textbf{segunda capa de feromona}
+$\tau_2$, reforzada solo por el mejor tour global de cada iteración, con un
+exponente $\alpha_2 < \alpha$ para que su influencia sea menor que la de la
+feromona principal; el peso final de cada arista es
+$w_{ij} = \tau_{ij}^{\alpha}\,\tau_{2,ij}^{\alpha_2}\,\eta_{ij}^{\beta}$, que
+es exactamente el ``peso precalculado por iteración'' de la
+Tabla~\ref{tab:estrategias}.
+
 % La tabla completa se genera en informe/tablas/estrategias_ahorro.tex a
 % partir de docs/estrategias_ahorro.md (bloque D/E).
 \input{tablas/estrategias_ahorro.tex}
@@ -419,14 +428,14 @@ Linux (g++ 13, OpenMP, C++20) antes de este repositorio. La Fase 1 lo portó
 a Windows y le añadió tres capacidades sin tocar su diseño de fondo:
 
 \begin{itemize}
-\item \textbf{Portabilidad}: \texttt{getrusage}/\texttt{ru\_maxrss} (Linux)
-se reemplazó por \texttt{GetProcessMemoryInfo}/\texttt{PeakWorkingSetSize}
+\item \textbf{Portabilidad}: \texttt{\seqsplit{getrusage/ru\_maxrss}} (Linux)
+se reemplazó por \texttt{\seqsplit{GetProcessMemoryInfo/PeakWorkingSetSize}}
 bajo \texttt{\#ifdef \_WIN32}, enlazando con \texttt{-lpsapi}. El compilador
 elegido fue MinGW-w64 g++ 16.1.0 (WinLibs), que pasó sin problemas la prueba
-de C++20 + \texttt{std::atomic\_ref<float>} + OpenMP (Fase 0); no hizo falta
-sustituir ningún primitivo del código original.
+de C++20 + \texttt{\seqsplit{std::atomic\_ref<float>}} + OpenMP (Fase 0); no
+hizo falta sustituir ningún primitivo del código original.
 \item \textbf{\texttt{--input}}: lectura básica de instancias TSPLIB
-\texttt{EUC\_2D} (sección \texttt{NODE\_COORD\_SECTION}) o de un formato
+\texttt{EUC\_2D} (sección \texttt{\seqsplit{NODE\_COORD\_SECTION}}) o de un formato
 plano de dos columnas \texttt{x y}, con autodetección del formato. Las
 coordenadas originales se normalizan al cuadrado unidad guardando el factor
 de escala, para poder reportar longitudes en las unidades originales del
@@ -499,7 +508,7 @@ CPU repitiendo el mismo buffer por hilo.
 \paragraph{Paralelismo.} Las hormigas son independientes entre sí durante la
 construcción (cada una solo lee la feromona y escribe en su propio buffer),
 así que el bucle de construcción paraleliza casi sin coordinación entre
-hilos (\texttt{\#pragma omp for schedule(dynamic,1)}); el depósito de
+hilos (\texttt{\seqsplit{\#pragma omp for schedule(dynamic,1)}}); el depósito de
 feromona usa operaciones atómicas porque varias hormigas pueden depositar en
 la misma arista al mismo tiempo. La parte estrictamente secuencial de cada
 iteración es la evaporación, el recálculo de pesos y la actualización del
@@ -525,19 +534,36 @@ Held-Karp; $n=200\,000$ usa hasta 3 semillas por el costo de cómputo
 
 \paragraph{Parámetros.} Configuración de partida: $K=8$, $\alpha=1.5$,
 $\beta=5$, $\rho=0.1$, $q_{fac}=3$ (tomada de una nota preliminar del
-enunciado). El barrido de un factor a la vez (\texttt{resultados/barrido\_parametros.csv})
+enunciado). El barrido de un factor a la vez
+(\texttt{\seqsplit{resultados/barrido\_parametros.csv}})
 y la comparación apareada con prueba de Wilcoxon
-(\texttt{scripts/seleccion\_configuracion.py}) llevaron a activar la segunda
-capa de feromona ($\text{two}=1$, $\alpha_2=1.0$) sobre esa configuración de
-partida, por dar una mejora significativa ($p=0{,}0078$); combinar los
-mejores valores individuales de cada parámetro, en cambio, no mejoró la
-combinación de partida ($p=0{,}055$, sin diferencia significativa). Detalle
-completo en \texttt{docs/decisiones\_diseno.md}.
+(\texttt{\seqsplit{scripts/seleccion\_configuracion.py}}) llevaron a activar
+la segunda capa de feromona ($\text{two}=1$, $\alpha_2=1.0$) sobre esa
+configuración de partida, por dar una mejora significativa ($p=0{,}0078$);
+combinar los mejores valores individuales de cada parámetro, en cambio, no
+mejoró la combinación de partida ($p=0{,}055$, sin diferencia
+significativa). Detalle completo en \texttt{\seqsplit{docs/decisiones\_diseno.md}}.
+
+\paragraph{Criterios de parada.} El algoritmo se detiene por el primero de
+tres criterios que se cumpla: un número máximo de iteraciones, un
+presupuesto de tiempo total (\texttt{--time}), o un número de iteraciones
+consecutivas sin mejorar el mejor global (\emph{stall}). Los tres se
+compararon en $n=2\,000$, 5 semillas cada uno
+(\texttt{\seqsplit{resultados/barrido\_criterio\_parada.csv}}): con 50 iteraciones fijas
+la longitud media fue 39,01; con \emph{stall}=10 el algoritmo corrió, en
+promedio, 65,2 iteraciones antes de detenerse por sí solo y llegó a una
+media ligeramente mejor (38,90); con un presupuesto de 5 s alcanzó apenas 38
+iteraciones en promedio y quedó peor (39,31). Es decir, para esta
+instancia, dejar que el algoritmo decida cuándo parar (\emph{stall}) fue
+tan bueno como fijar un número de iteraciones, y mejor que limitar el
+tiempo de forma estricta; las corridas de este informe usan, de todas
+formas, un número de iteraciones fijo (más fácil de comparar entre
+configuraciones distintas).
 
 \paragraph{Métricas y su medición.} Longitud del mejor tour (recalculada en
 doble precisión y verificada contra la reportada por el programa en cada
-corrida), tiempo de preparación y de ACO (\texttt{std::chrono::steady\_clock}),
-y pico de memoria del proceso (\texttt{GetProcessMemoryInfo}/\texttt{PeakWorkingSetSize}
+corrida), tiempo de preparación y de ACO (\texttt{\seqsplit{std::chrono::steady\_clock}}),
+y pico de memoria del proceso (\texttt{\seqsplit{GetProcessMemoryInfo/PeakWorkingSetSize}}
 en Windows). Para comparar configuraciones se usa la media, la desviación
 estándar, el mínimo y el máximo sobre las semillas, y una prueba de Wilcoxon
 apareada (mismas semillas en ambas configuraciones) antes de afirmar que una
@@ -545,8 +571,9 @@ es mejor que otra, no solo la diferencia de medias.
 
 % ====================================================================
 \section{Resultados por instancia}
+\label{sec:resultados}
 Todas las tablas de esta sección se generan automáticamente con
-\texttt{scripts/generar\_figuras.py} a partir de los CSV de
+\texttt{\seqsplit{scripts/generar\_figuras.py}} a partir de los CSV de
 \texttt{resultados/}; ningún número se copió a mano.
 
 \subsection{n = 20}
@@ -590,6 +617,19 @@ ganadora es consistente en orden de magnitud y ligeramente mejor.
 gradual: al haber más ciudades y más pasos por tour, cada iteración aporta
 información más fina, y la mejora se reparte en más iteraciones antes de
 aplanarse.
+
+Antes de leer los mapas de calor de $\alpha$-$\beta$ y $\rho$-$Q$ que
+siguen, conviene recordar qué controla cada parámetro de la
+ecuación~\eqref{eq:transicion} y de la actualización de feromona
+(sección~\ref{sec:estrategias}): $\alpha$, $\beta$ y $\rho$ regulan el
+equilibrio entre repetir lo que ya funcionó (\textbf{explotación}) y probar
+caminos distintos (\textbf{exploración}). $\alpha$ alto amplifica la
+feromona acumulada y favorece la explotación (riesgo: estancamiento
+prematuro); $\beta$ alto favorece los vecinos cercanos sin importar la
+feromona (riesgo: ignorar información útil de iteraciones pasadas); $\rho$
+alto olvida rápido el pasado (más exploración, pero también más varianza
+entre corridas). Los dos mapas de calor de abajo son, precisamente, un
+barrido de ese equilibrio en esta instancia:
 
 \begin{figure}[H]
 \centering
@@ -679,7 +719,7 @@ vecinas y distancias $nK$ cada una, feromona y feromona secundaria $nK$
 cada una, pesos $3nK$, y el estado por hilo $6n$ por cada uno de los 12
 hilos). La suma teórica (104,0 MB) coincide, dentro de un 1,3\,\%, con el
 pico de memoria realmente medido en la misma instancia (105,4 MB,
-\texttt{resultados/escalamiento\_disperso.csv}): esa cercanía confirma que
+\texttt{\seqsplit{resultados/escalamiento\_disperso.csv}}): esa cercanía confirma que
 el modelo de memoria de la sección~\ref{sec:complejidad} explica
 correctamente dónde se va cada byte, no solo el orden de magnitud total.
 
@@ -948,30 +988,34 @@ Colony Optimization).
 
 \subsection{Cómo reproducir cada tabla y figura}
 Todos los comandos se ejecutan desde la raíz del repositorio
-(\texttt{D:\textbackslash camilo\textbackslash Documentos\textbackslash ACO\_IA}), con los ejecutables ya
-compilados (ver \texttt{README.md}).
+(\texttt{\seqsplit{D:\textbackslash{}camilo\textbackslash{}Documentos\textbackslash{}ACO\_IA}}),
+con los ejecutables ya compilados (ver \texttt{README.md}).
 
+{\small
 \begin{itemize}
-\item \textbf{Tabla~\ref{tab:n20} (n=20)}: \texttt{resultados/instancia\_n20.csv},
-generada con 5 llamadas a \texttt{aco\_tsp.exe --n 20 --ants 20 --iters 100
---K 19 --exact 1 --seed \{1..5\}}; tabla producida por
-\texttt{python scripts/generar\_figuras.py tabla\_n20}.
-\item \textbf{Tabla~\ref{tab:n2000} (n=2\,000)}: \texttt{python
-scripts/seleccion\_configuracion.py} (8 semillas, 3 configuraciones); tabla
-producida por \texttt{python scripts/generar\_figuras.py tabla\_n2000}.
-\item \textbf{Figura de crecimiento factorial}: \texttt{python
-scripts/generar\_figuras.py factorial} (sin dependencias de
-\texttt{resultados/}, cálculo directo con \texttt{lgamma}).
-\item \textbf{Diagramas de caja por configuración}: \texttt{python
-scripts/experimentos\_fase2.py barrido\_parametros} y luego
-\texttt{python scripts/generar\_figuras.py boxplots}.
-\item \textbf{Tiempo vs. m, n=200\,000}: \texttt{scripts/ejecutar\_corridas\_largas.ps1}
-(punto 1) y luego \texttt{python scripts/generar\_figuras.py tiempo\_vs\_m}.
+\item \textbf{Tabla~\ref{tab:n20} (n=20)}: \texttt{\seqsplit{resultados/instancia\_n20.csv}},
+generada con 5 llamadas a
+\texttt{\seqsplit{aco\_tsp.exe --n 20 --ants 20 --iters 100 --K 19 --exact 1 --seed \{1..5\}}};
+tabla producida por \texttt{\seqsplit{python scripts/generar\_figuras.py tabla\_n20}}.
+\item \textbf{Tabla~\ref{tab:n2000} (n=2\,000)}:
+\texttt{\seqsplit{python scripts/seleccion\_configuracion.py}} (8 semillas,
+3 configuraciones); tabla producida por
+\texttt{\seqsplit{python scripts/generar\_figuras.py tabla\_n2000}}.
+\item \textbf{Figura de crecimiento factorial}:
+\texttt{\seqsplit{python scripts/generar\_figuras.py factorial}} (sin
+dependencias de \texttt{resultados/}, cálculo directo con \texttt{lgamma}).
+\item \textbf{Diagramas de caja por configuración}:
+\texttt{\seqsplit{python scripts/experimentos\_fase2.py barrido\_parametros}}
+y luego \texttt{\seqsplit{python scripts/generar\_figuras.py boxplots}}.
+\item \textbf{Tiempo vs. m, n=200\,000}:
+\texttt{\seqsplit{scripts/ejecutar\_corridas\_largas.ps1}} (punto 1) y luego
+\texttt{\seqsplit{python scripts/generar\_figuras.py tiempo\_vs\_m}}.
 \item El resto de figuras y tablas (convergencia, mapas de calor,
 aceleración por hilos, memoria por componente, tours finales) se generan
-con las funciones correspondientes de \texttt{scripts/generar\_figuras.py},
+con las funciones correspondientes de \texttt{\seqsplit{scripts/generar\_figuras.py}},
 listadas al final de ese archivo.
 \end{itemize}
+}
 
 \subsection{Glosario corto}
 \begin{itemize}
