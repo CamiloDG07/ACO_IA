@@ -208,6 +208,14 @@ computador, revisa ese espacio en un tiempo razonable, así que hace falta
 una metaheurística que explore una fracción pequeña del espacio y aun así
 encuentre soluciones buenas.
 
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.7\textwidth]{01_crecimiento_factorial.png}
+\caption{Crecimiento de $\log_{10}((n-1)!/2)$ para $n=6,10,15,20,2\,000,200\,000$.}
+\label{fig:factorial}
+\end{figure}
+\input{tablas/factorial.tex}
+
 Held-Karp resuelve el TSP de forma exacta con programación dinámica en
 $O(n^2 2^n)$, muchísimo mejor que $O(n!)$ pero todavía exponencial: en este
 trabajo solo es viable para $n=20$ (ver sección~\ref{sec:complejidad}), y se
@@ -515,6 +523,21 @@ Todas las tablas de esta sección se generan automáticamente con
 Cuatro de cinco semillas alcanzan el óptimo exacto; la semilla restante
 queda a 1,176\,\% del óptimo. Los cinco tours son permutaciones válidas.
 
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.7\textwidth]{02_convergencia_n20.png}
+\caption{Convergencia (mejor global vs. iteración), n=20, 3 semillas.}
+\label{fig:convergencia-n20}
+\end{figure}
+\textbf{Cómo leer esta figura:} cada línea es el mejor tour encontrado hasta
+esa iteración, para una semilla distinta. Se espera una caída rápida en las
+primeras iteraciones (la feromona todavía no distingue buenas de malas
+aristas) y un aplanamiento posterior (una vez que la feromona converge
+alrededor de las aristas del mejor tour, hay cada vez menos margen de
+mejora). Las tres semillas convergen a valores parecidos, coherente con que
+$n=20$ es una instancia pequeña donde el algoritmo explora casi todo el
+espacio relevante en pocas iteraciones.
+
 \subsection{n = 2 000}
 8 semillas, configuración ganadora ($K=8$, $\alpha=1.5$, $\beta=5$,
 $\rho=0.1$, $q_{fac}=3$, segunda feromona activada), $m=2\,000$, 50
@@ -525,6 +548,17 @@ configuración sin segunda feromona) reportaba una longitud de 38,20 para
 una configuración parecida; el resultado con 8 semillas y la configuración
 ganadora es consistente en orden de magnitud y ligeramente mejor.
 
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.7\textwidth]{02_convergencia_n2000.png}
+\caption{Convergencia (mejor global vs. iteración), n=2\,000, 3 semillas.}
+\label{fig:convergencia-n2000}
+\end{figure}
+\textbf{Cómo leer esta figura:} igual que en $n=20$, pero con una caída más
+gradual: al haber más ciudades y más pasos por tour, cada iteración aporta
+información más fina, y la mejora se reparte en más iteraciones antes de
+aplanarse.
+
 \subsection{n = 200 000}
 \emph{Pendiente: se completa con la corrida real de $m=20\,000$ (10
 iteraciones, hasta 3 semillas) al cerrar el bloque C. Ver
@@ -534,11 +568,93 @@ iteraciones, hasta 3 semillas) al cerrar el bloque C. Ver
 % ====================================================================
 \section{Análisis de tiempo y memoria}
 \label{sec:tiempo-memoria}
-\emph{Pendiente: comprobación empírica de la sección~\ref{sec:complejidad}
-(escalamiento dispersa/densa, aceleración por hilos, costo de $m$ y
-extrapolación a $m=n$, comparación a igual presupuesto de cómputo). Se
-completa con las figuras y tablas de \texttt{scripts/generar\_figuras.py}
-una vez cerradas las corridas largas (bloque C).}
+
+\subsection{Memoria: densa contra dispersa}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.7\textwidth]{08_memoria_densa_dispersa.png}
+\caption{Memoria pico contra $n$, versión densa contra dispersa, escala log-log.}
+\label{fig:memoria-densa-dispersa}
+\end{figure}
+\textbf{Cómo leer esta figura:} la línea densa (medida hasta $n=2\,000$,
+calculada más allá) crece como $n^2$ y cruza la RAM disponible de la
+máquina (15,88 GB) alrededor de $n\approx 63\,000$; la línea dispersa crece
+de forma mucho más lenta ($O(nK)$) y sigue siendo de decenas de MB incluso
+en $n=200\,000$. Esta es la comprobación empírica directa de por qué el
+enunciado pide "ahorrar recursos": sin la lista de $K$ candidatas, la
+instancia más grande de este trabajo sería, sencillamente, irrealizable en
+esta máquina.
+
+\subsection{Memoria por componente}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.8\textwidth]{09_memoria_por_componente.png}
+\caption{Memoria estimada por componente, n=200\,000, K=8, 12 hilos.}
+\label{fig:memoria-componente}
+\end{figure}
+\textbf{Cómo leer esta figura:} cada barra es una estimación teórica directa
+a partir de los tamaños de los arreglos del código (coordenadas $2n$,
+vecinas y distancias $nK$ cada una, feromona y feromona secundaria $nK$
+cada una, pesos $3nK$, y el estado por hilo $6n$ por cada uno de los 12
+hilos). La suma teórica (104,0 MB) coincide, dentro de un 1,3\,\%, con el
+pico de memoria realmente medido en la misma instancia (105,4 MB,
+\texttt{resultados/escalamiento\_disperso.csv}): esa cercanía confirma que
+el modelo de memoria de la sección~\ref{sec:complejidad} explica
+correctamente dónde se va cada byte, no solo el orden de magnitud total.
+
+\subsection{Efecto de K y de la segunda feromona}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.7\textwidth]{05_efecto_K.png}
+\caption{Efecto de K sobre la calidad, n=2\,000 (media $\pm$ desviación, 5 semillas).}
+\label{fig:efecto-k}
+\end{figure}
+\textbf{Cómo leer esta figura:} a diferencia de lo que podría esperarse (más
+candidatas, mejor calidad), la media empeora ligeramente al aumentar $K$ en
+esta configuración base. Con $\alpha=1$, $\beta=3$ (valores de esta barrida,
+no los de la configuración ganadora), más candidatas dan a la ruleta más
+opciones de peso parecido entre sí, lo que diluye la guía de la heurística;
+esto es una observación empírica de esta configuración concreta, no una
+regla general sobre $K$.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.55\textwidth]{05_efecto_segunda_feromona.png}
+\caption{Efecto de la segunda feromona sobre la configuración de referencia, n=2\,000, 8 semillas.}
+\label{fig:efecto-segunda-feromona}
+\end{figure}
+\textbf{Cómo leer esta figura:} misma comparación apareada de la
+sección~\ref{sec:numero-agentes} (Wilcoxon, $p=0{,}0078$), mostrada como
+diagrama de caja: la caja "con segunda feromona" está desplazada hacia
+longitudes menores, con una dispersión similar a la de la configuración sin
+ella, es decir, la mejora no viene a costa de más varianza entre semillas.
+
+\subsection{Varianza entre semillas por parámetro}
+Los diagramas de caja de cada parámetro del barrido (\texttt{figuras/03\_boxplot\_*.png})
+muestran, para cada valor probado, la dispersión de la longitud del mejor
+tour entre las 5 semillas. Se incluyen en el anexo de figuras; ninguno
+muestra una semilla atípica que se aleje de forma anómala de las demás, lo
+que respalda usar la media (y no solo una corrida) como criterio de
+comparación entre valores de un parámetro.
+
+\subsection{Longitud contra referencias}
+\input{tablas/longitud_referencias.tex}
+Para $n=2\,000$, la longitud del mejor tour (37,50) queda por encima de la
+aproximación asintótica de Beardwood-Halton-Hammersley (32,91), como se
+espera: BHH es un límite asintótico para $n\to\infty$ en el cuadrado
+unidad, no una cota alcanzable en una instancia finita, y además supone
+puntos uniformes sin borde, mientras que el cuadrado unidad sí tiene borde
+(lo que sesga hacia tours algo más largos que la aproximación). Para
+$n=20$, la comparación relevante es Held-Karp (óptimo exacto), no BHH (que
+solo es significativo para $n$ grande).
+
+\subsection{Costo de $m$, escalamiento, aceleración e igual presupuesto de cómputo}
+\emph{Pendiente: se completa con \texttt{scripts/ejecutar\_corridas\_largas.ps1}
+(costo de $m$ en $n=200\,000$, corrida real y comparación a igual
+presupuesto) y \texttt{scripts/experimentos\_fase3\_figuras.py} (aceleración
+por hilos), ambos al cerrar el bloque C. La derivación teórica ya está en la
+sección~\ref{sec:complejidad}; aquí falta la comprobación empírica de esa
+parte específica.}
 
 % ====================================================================
 \section{Discusión}

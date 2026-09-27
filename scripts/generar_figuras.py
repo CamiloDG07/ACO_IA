@@ -73,10 +73,18 @@ def fig_factorial():
     ax.set_title("Crecimiento factorial del espacio de recorridos")
     _guardar_fig(fig, "01_crecimiento_factorial.png")
 
-    filas = "\n".join(
-        f"{n} & {10**v:.3e} & {v:.1f} \\\\" if v > 6 else f"{n} & {math.exp(math.lgamma(n) - math.log(2)):.3e} & {v:.2f} \\\\"
-        for n, v in zip(ns, log10_val)
-    )
+    def _fila_factorial(n, v):
+        # (n-1)!/2 = exp(lgamma(n) - log(2)); para v grande, exp(...) tambien
+        # desborda un float de 64 bits (por eso se calcula v = log10(...) con
+        # lgamma en primer lugar). Solo se materializa el valor exacto cuando
+        # es representable; si no, se reporta el orden de magnitud.
+        if v <= 300:  # 10**300 esta bien dentro del rango de un float de 64 bits
+            valor = f"{10 ** v:.3e}"
+        else:
+            valor = f"$>10^{{{v:.0f}}}$ ({v:.0f} dígitos)"
+        return f"{n} & {valor} & {v:.2f} \\\\"
+
+    filas = "\n".join(_fila_factorial(n, v) for n, v in zip(ns, log10_val))
     tabla = (
         "\\begin{table}[H]\\centering\n"
         "\\caption{Recorridos posibles $(n-1)!/2$, calculado con \\texttt{lgamma}.}\n"
@@ -97,8 +105,9 @@ def tabla_resultados_n20():
         for r in df.itertuples()
     )
     resumen = (
-        f"Media & {_fmt(df.gap_pct.mean())} & Desv. & {_fmt(df.gap_pct.std())} & "
-        f"Mín. & {_fmt(df.gap_pct.min())} & Máx. & {_fmt(df.gap_pct.max())}"
+        f"Media {_fmt(df.gap_pct.mean())}, desviación {_fmt(df.gap_pct.std())}, "
+        f"mínimo {_fmt(df.gap_pct.min())}, máximo {_fmt(df.gap_pct.max())} "
+        "(puntos porcentuales de gap)."
     )
     tabla = (
         "\\begin{table}[H]\\centering\n"
@@ -106,8 +115,8 @@ def tabla_resultados_n20():
         "\\label{tab:n20}\n"
         "\\begin{tabular}{rrrrc}\\toprule\n"
         "Semilla & $L_{mejor}$ & Óptimo exacto & Gap (\\%) & Tour válido \\\\\\midrule\n"
-        f"{filas}\\\\\\bottomrule\\end{{tabular}}\\\\[0.3em]\n"
-        f"\\footnotesize {resumen} (puntos porcentuales de gap)\n"
+        f"{filas}\n\\bottomrule\\end{{tabular}}\\\\[0.3em]\n"
+        f"{{\\footnotesize {resumen}}}\n"
         "\\end{table}\n"
     )
     _guardar_tabla("resultados_n20.tex", tabla)
