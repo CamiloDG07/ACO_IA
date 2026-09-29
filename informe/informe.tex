@@ -226,7 +226,10 @@ antes y después, y la medición que la respalda (detalle completo en
 evitar cualquier estructura de tamaño $O(n^2)$: en vez de una matriz
 completa de distancias y feromonas, cada ciudad solo conoce sus $K$ vecinas
 más cercanas (encontradas por una rejilla espacial en $O(nK)$, no por
-comparación exhaustiva en $O(n^2)$), y esas ciudades se renumeran por celda
+comparación exhaustiva en $O(n^2)$; esta técnica corresponde a lo que en la
+literatura y en implementaciones comparables se denomina \emph{estructura
+jerárquica espacial} o \emph{hier}, una poda por vecindad que evita
+recorrer todas las ciudades), y esas ciudades se renumeran por celda
 para que la memoria consultada por una hormiga esté físicamente cerca en el
 arreglo (localidad de caché). Ninguna hormiga guarda su tour completo: cada
 hilo reutiliza un único buffer y deposita feromona con operaciones atómicas
