@@ -74,23 +74,12 @@ DEL VIAJANTE (TSP): INSTANCIAS DE 20, 2 000 Y 200 000 CIUDADES}}\\[3.5cm]
 
 % ====================================================================
 \section{Introducción}
-El problema del viajante (\emph{Traveling Salesman Problem}, TSP) consiste
-en encontrar el recorrido más corto que visita una sola vez cada ciudad de
-un conjunto y regresa al punto de partida. Es uno de los problemas de
-optimización combinatoria más estudiados porque, siendo fácil de enunciar,
-su espacio de soluciones crece de forma factorial con el número de
-ciudades: para instancias grandes ninguna computadora actual puede revisar
-todos los recorridos posibles, y hace falta una estrategia distinta a la
-fuerza bruta.
-
-Este trabajo aplica la optimización por colonia de hormigas (\emph{Ant
-Colony Optimization}, ACO) al TSP en tres instancias de tamaño muy distinto:
-20, 2\,000 y 200\,000 ciudades, midiendo el desempeño en tiempo y en
-memoria, mostrando cómo ahorrar ambos recursos y sustentando cada decisión
-con una medición real, no con una suposición. Con 200\,000 ciudades, una
-matriz de distancias o de feromona completa ($n \times n$) ocuparía 320~GB
-(ver sección~\ref{sec:complejidad}), muy por encima de la memoria de
-cualquier computador personal; ese es el motivo central por el que este
+Este trabajo implementa ACO para el TSP en tres instancias de tamaño muy
+distinto: 20, 2\,000 y 200\,000 ciudades, midiendo el desempeño en tiempo y
+en memoria y sustentando cada decisión con una medición real, no con una
+suposición. Con 200\,000 ciudades, una matriz de distancias o de feromona
+completa ($n \times n$) ocuparía 320~GB (ver sección~\ref{sec:estrategias}),
+muy por encima de la memoria de cualquier computador personal; por eso el
 proyecto gira en gran medida alrededor de \textbf{cómo representar el
 problema sin pagar ese costo}, y no solo alrededor de encontrar tours
 cortos.
@@ -98,26 +87,6 @@ cortos.
 % ====================================================================
 \section{Descripción del problema y espacio de búsqueda factorial}
 \label{sec:espacio-factorial}
-En un TSP simétrico ($d_{ij}=d_{ji}$) con origen fijo (siempre se empieza en
-la misma ciudad, sin pérdida de generalidad porque el tour es un ciclo), el
-número de recorridos distintos es
-\begin{equation}
-\frac{(n-1)!}{2},
-\label{eq:factorial}
-\end{equation}
-porque hay $(n-1)!$ formas de ordenar las $n-1$ ciudades restantes, y cada
-tour se cuenta dos veces (una por cada sentido de recorrido). Esta cantidad
-crece más rápido que cualquier exponencial en $n$: para $n=20$ ya es del
-orden de $10^{16}$ (más recorridos que segundos han pasado desde el big
-bang, multiplicados varias veces); para $n=2\,000$ y $n=200\,000$ el número
-de dígitos se cuenta en miles y en cientos de miles, respectivamente (ver
-figura de crecimiento factorial, calculada con la función \texttt{lgamma}
-para evitar desbordar cualquier tipo numérico). Esta es la razón de fondo
-del ejercicio: ningún algoritmo de fuerza bruta, por rápido que sea el
-computador, revisa ese espacio en un tiempo razonable, así que hace falta
-una metaheurística que explore una fracción pequeña del espacio y aun así
-encuentre soluciones buenas.
-
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.7\textwidth]{01_crecimiento_factorial.png}
@@ -126,64 +95,32 @@ encuentre soluciones buenas.
 \end{figure}
 \input{tablas/factorial.tex}
 
-Held-Karp resuelve el TSP de forma exacta con programación dinámica en
-$O(n^2 2^n)$, muchísimo mejor que $O(n!)$ pero todavía exponencial: en este
-trabajo solo es viable para $n=20$ (ver sección~\ref{sec:complejidad}), y se
-usa exclusivamente para verificar qué tan cerca del óptimo llega ACO en la
-instancia más pequeña. Para $n=2\,000$ y $n=200\,000$ no existe una forma
-computable de obtener el óptimo exacto a esa escala, así que la calidad
-solo se puede comparar contra referencias, no contra el valor óptimo real
-(ver sección~\ref{sec:tiempo-memoria} para el detalle de esas referencias).
+El espacio de soluciones crece de forma factorial; Held-Karp es exacto
+pero computacionalmente inviable más allá de instancias muy
+pequeñas\footnote{$2^{20}\approx 10^6$, así que $n^2 2^n \approx
+4\times10^8$ operaciones es viable en segundos; para $n=2\,000$ o
+$n=200\,000$, $2^n$ desborda cualquier computador existente.}, por lo que
+solo se usa para verificar $n=20$.
 
 % ====================================================================
 \section{Diseño de la solución}
 
 \subsection{Elección de lenguaje}
-Se implementó en C++20 por su manejo directo de memoria, su soporte de
-estructuras de datos eficientes (vectores contiguos, tipos atómicos) en la
-librería estándar, y porque permite paralelismo simple con OpenMP: una
-directiva por bucle basta para repartir la construcción de tours entre
-hilos, sin reescribir la lógica secuencial del algoritmo. Ese paralelismo
-con bajo costo de código adicional, junto con partir de un código base ya
-validado, fue lo que inclinó la decisión hacia C++ y OpenMP para este
-proyecto.
+Se implementó en C++20 con OpenMP.
 
 \subsection{Construcción del tour}
 \label{sec:construccion-tour}
-Esta subsección describe la parte del código (\texttt{buildTour} en
-\texttt{src/aco\_tsp.cpp}) que cada hormiga ejecuta para armar un tour, y
-las fórmulas exactas que implementa. El TSP se representa como un grafo
-completo de $n$ ciudades, con una distancia $d_{ij}$ entre cada par $(i,j)$
-(euclidiana, en este trabajo). Cada arista $(i,j)$ tiene, además de su
-distancia, un valor de feromona $\tau_{ij}$ que el algoritmo actualiza en
-cada iteración; $\tau_{ij}$ alto significa ``muchas hormigas buenas pasaron
-por aquí en el pasado reciente''.
-
 En cada paso de construcción, una hormiga que está en la ciudad $i$ elige la
-siguiente ciudad $j$, entre las no visitadas, con probabilidad
+siguiente ciudad $j$, entre las $K$ vecinas más cercanas de $i$ que aún no
+se visitaron (sección~\ref{sec:estrategias}), con probabilidad
 \begin{equation}
 p^k_{ij} = \frac{\tau_{ij}^{\alpha}\,\eta_{ij}^{\beta}}
 {\displaystyle\sum_{l \in N^k_i} \tau_{il}^{\alpha}\,\eta_{il}^{\beta}},
 \qquad \eta_{ij} = \frac{1}{d_{ij}},
 \label{eq:transicion}
 \end{equation}
-donde $N^k_i$ es el conjunto de ciudades que la hormiga $k$ aún no ha
-visitado (o, en la versión dispersa de este trabajo, la lista de $K$
-vecinas más cercanas de $i$ que aún no se visitaron, ver
-sección~\ref{sec:estrategias}), y $\eta_{ij}$ es la \textbf{heurística}:
-entre más cerca esté una ciudad, más atractiva es, con independencia de la
-feromona. Los parámetros $\alpha$ y $\beta$ controlan cuánto pesa la
-feromona frente a la heurística: con $\alpha=0$ solo importa la distancia
-(un vecino más cercano estocástico); con $\beta=0$ solo importa la
-feromona acumulada, lo que típicamente lleva a estancamiento (todas las
-hormigas convergen al mismo tour, así no sea bueno). La
-ecuación~\eqref{eq:transicion} no elige siempre la arista de mayor peso: el
-código la implementa como una \textbf{ruleta} probabilística sobre los
-pesos de las candidatas, lo que permite explorar en vez de repetir siempre
-el mismo camino y escapar de
-óptimos locales, la razón de fondo de por qué dos corridas con distinta
-semilla (misma configuración) dan tours distintos, como se ve en las curvas
-de convergencia de la sección~\ref{sec:resultados}.
+El código lo implementa como ruleta sobre los pesos de las $K$ ciudades
+candidatas.
 
 \subsection{Número de agentes}
 \label{sec:numero-agentes}
@@ -218,37 +155,9 @@ $m=2\,048$ (barata) & 5 & 44,1 & 390,486 & 0,518 & 0,47\,\% & 102,5 \\
 }
 \end{table}
 
-Se prefirió, en la práctica, $m=2\,048$ sobre $m=20\,000$: a igual tiempo de
-reloj dio mejor calidad en las 3 de 3 semillas probadas. El tope de 20\,000
-se sostiene entonces por la convención de la literatura y el presupuesto de
-tiempo \emph{total} del proyecto, no por una ventaja de calidad medida.
-
-La razón detrás de esto es de tiempo y paralelismo, no de memoria: en esta
-implementación cada hilo reutiliza un único buffer de estado
-(sección~\ref{sec:estrategias}), así que el pico de memoria medido no
-depende de cuántas hormigas se ejecuten por iteración, y de hecho ambas
-configuraciones midieron prácticamente el mismo pico (102,4 MB). Lo que sí
-cambia es cómo se reparte el tiempo de cómputo: con OpenMP el paralelismo
-tiene un límite práctico cercano al número de núcleos disponibles, así que
-agregar hormigas más allá de ese límite añade hilos que compiten por los
-mismos núcleos y por el mismo ancho de banda de memoria, sin acelerar el
-trabajo de forma proporcional. Invertir el mismo presupuesto de tiempo en
-más iteraciones con una colonia moderada, en cambio, aprovecha ese tiempo
-íntegro para refinar la feromona paso a paso en vez de gastarlo en
-coordinar más hormigas por vuelta, lo que es consistente con que
-$m=2\,048$ haya dado mejor calidad que $m=20\,000$ a igual tiempo de reloj
-y con memoria equivalente.
-
-La tercera fila de la Tabla~\ref{tab:igual_presupuesto} muestra el otro
-extremo de este mismo compromiso: recortar las iteraciones a solo 5 ahorra
-tiempo de forma proporcional (44,1~s frente a los 838--905~s de las otras
-dos configuraciones), pero no memoria (el pico sigue en
-${\approx}102$~MB, por la misma razón de arriba), y la calidad cae de
-forma notoria (0,47\,\% de mejora sobre el vecino más cercano, frente a
-1,28\,\% y 1,75\,\%). Hay entonces un límite práctico a cuánto se puede
-recortar antes de que la solución deje de ser útil: el ahorro de recursos
-de este trabajo tiene sentido mientras siga habiendo suficientes
-iteraciones para que la feromona alcance a guiar la búsqueda.
+La ventaja de $m$ chico con más iteraciones es de tiempo/paralelismo, no
+de memoria: el pico es igual en las tres configuraciones. Recortar
+iteraciones ahorra tiempo pero degrada la calidad, como muestra la tabla.
 
 \subsection{Estructuras de datos y estrategias de ahorro}
 \label{sec:estrategias}
@@ -260,10 +169,7 @@ antes y después, y la medición que la respalda (detalle completo en
 evitar cualquier estructura de tamaño $O(n^2)$: en vez de una matriz
 completa de distancias y feromonas, cada ciudad solo conoce sus $K$ vecinas
 más cercanas (encontradas por una rejilla espacial en $O(nK)$, no por
-comparación exhaustiva en $O(n^2)$; esta técnica corresponde a lo que en la
-literatura y en implementaciones comparables se denomina \emph{estructura
-jerárquica espacial} o \emph{hier}, una poda por vecindad que evita
-recorrer todas las ciudades), y esas ciudades se renumeran por celda
+comparación exhaustiva en $O(n^2)$), y esas ciudades se renumeran por celda
 para que la memoria consultada por una hormiga esté físicamente cerca en el
 arreglo (localidad de caché). Ninguna hormiga guarda su tour completo: cada
 hilo reutiliza un único buffer y deposita feromona con operaciones atómicas
@@ -300,54 +206,8 @@ $w_{ij} = \tau_{ij}^{\alpha}\,\tau_{2,ij}^{\alpha_2}\,\eta_{ij}^{\beta}$, el
 % ====================================================================
 \section{Análisis de complejidad}
 \label{sec:complejidad}
-Cada afirmación de costo de este trabajo tiene una derivación teórica y una
-comprobación empírica (sección~\ref{sec:tiempo-memoria}); aquí se presenta
-solo la derivación.
-
-\begin{table}[H]
-\centering
-\caption{Complejidad en tiempo, derivada por componente.}
-\label{tab:complejidad-tiempo}
-\footnotesize
-\begin{tabular}{p{3.0cm}p{2.6cm}p{8.4cm}}
-\toprule
-\rowcolor{gray!25}
-\textbf{Componente} & \textbf{Complejidad} & \textbf{Por qué} \\
-\midrule
-Espacio de búsqueda & $(n-1)!/2$; Held-Karp $O(n^2 2^n)$ & Fuerza bruta inviable para cualquier $n$ práctico; Held-Karp es exacto pero exponencial, viable solo en $n=20$ (nota 1); ACO explora una fracción minúscula del espacio en tiempo polinomial, sin garantía de optimalidad \\
-Construcción de una hormiga & $O(nK)$ (+ reserva) & $K$ candidatas por paso; la búsqueda de reserva por rejilla (cuando las $K$ ya están visitadas) es más cara al final del tour, con pocas ciudades libres \\
-Una iteración & $O(mnK)$; $O(n^2K)$ si $m=n$ & $m$ hormigas $\times$ $O(nK)$ cada una, más $O(nK)$ de evaporación y recálculo de pesos; con matriz densa serían $O(mn^2)$ en tiempo y $O(n^2)$ en memoria (comparación \texttt{aco\_tsp}/\texttt{aco\_denso} en la sección~\ref{sec:tiempo-memoria}) \\
-\bottomrule
-\end{tabular}
-\end{table}
-{\footnotesize Nota 1: $2^{20}\approx 10^6$, así que $n^2 2^n \approx
-4\times10^8$ operaciones es viable en segundos; para $n=2\,000$ o
-$n=200\,000$, $2^n$ desborda cualquier computador existente.}
-
-\begin{table}[H]
-\centering
-\caption{Complejidad en memoria, derivada por estructura.}
-\label{tab:complejidad-memoria}
-\footnotesize
-\begin{tabular}{p{5.5cm}p{2.0cm}p{6.5cm}}
-\toprule
-\rowcolor{gray!25}
-\textbf{Estructura} & \textbf{Tamaño} & \textbf{Nota} \\
-\midrule
-Vecinas, distancias, feromona(s) y pesos & $O(nK)$ & Por instancia, no por hormiga \\
-Estado de construcción (buffers de tour y de visitado) & $O(n)$ por hilo & Independiente de $m$: las hormigas no guardan su tour, así que más hormigas por iteración no agrega arreglos, solo más trabajo de CPU repitiendo el mismo buffer \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\paragraph{Paralelismo.} Las hormigas se construyen en paralelo casi sin
-coordinación entre hilos; la fracción estrictamente secuencial $s$ de cada
-iteración (evaporación, pesos, mejor global) acota, por la ley de Amdahl, la
-aceleración máxima alcanzable con $p$ hilos:
-\begin{equation}
-\text{Aceleración máxima} = \frac{1}{s + \dfrac{1-s}{p}}.
-\label{eq:amdahl}
-\end{equation}
+Cada iteración cuesta $O(m\,n\,K)$, verificado empíricamente en la sección
+de resultados de tiempo y memoria.
 
 % ====================================================================
 \section{Metodología experimental}
@@ -446,18 +306,9 @@ gradual: al haber más ciudades y más pasos por tour, cada iteración aporta
 información más fina, y la mejora se reparte en más iteraciones antes de
 aplanarse.
 
-Antes de leer los mapas de calor de $\alpha$-$\beta$ y $\rho$-$Q$ que
-siguen, conviene recordar qué controla cada parámetro de la
-ecuación~\eqref{eq:transicion} y de la actualización de feromona
-(sección~\ref{sec:estrategias}): $\alpha$, $\beta$ y $\rho$ regulan el
-equilibrio entre repetir lo que ya funcionó (\textbf{explotación}) y probar
-caminos distintos (\textbf{exploración}). $\alpha$ alto amplifica la
-feromona acumulada y favorece la explotación (riesgo: estancamiento
-prematuro); $\beta$ alto favorece los vecinos cercanos sin importar la
-feromona (riesgo: ignorar información útil de iteraciones pasadas); $\rho$
-alto olvida rápido el pasado (más exploración, pero también más varianza
-entre corridas), equilibrio que barren, precisamente, los dos mapas de
-calor de abajo en esta instancia:
+Ver sección~\ref{sec:construccion-tour} y sección~\ref{sec:estrategias}
+para el rol de $\alpha$, $\beta$ y $\rho$. Los mapas de calor barren
+$\alpha$-$\beta$ y $\rho$-$q_{fac}$:
 
 \begin{figure}[H]
 \centering
@@ -548,8 +399,8 @@ cada una, pesos $3nK$, y el estado por hilo $6n$ por cada uno de los 12
 hilos). La suma teórica (104,0 MB) coincide, dentro de un 1,3\,\%, con el
 pico de memoria realmente medido en la misma instancia (105,4 MB,
 \texttt{\seqsplit{resultados/escalamiento\_disperso.csv}}): esa cercanía confirma que
-el modelo de memoria de la sección~\ref{sec:complejidad} explica
-correctamente dónde se va cada byte, no solo el orden de magnitud total.
+el desglose por componente de la figura explica correctamente dónde se va
+cada byte, no solo el orden de magnitud total.
 
 \subsection{Efecto de K y de la segunda feromona}
 \begin{figure}[H]
@@ -590,12 +441,8 @@ comparación entre valores de un parámetro.
 \input{tablas/longitud_referencias.tex}
 Para $n=2\,000$, la longitud del mejor tour (37,50) queda por encima de la
 aproximación asintótica de Beardwood-Halton-Hammersley (32,91), como se
-espera: BHH es un límite asintótico para $n\to\infty$ en el cuadrado
-unidad, no una cota alcanzable en una instancia finita, y además supone
-puntos uniformes sin borde, mientras que el cuadrado unidad sí tiene borde
-(lo que sesga hacia tours algo más largos que la aproximación). Para
-$n=20$, la comparación relevante es Held-Karp (óptimo exacto), no BHH (que
-solo es significativo para $n$ grande).
+espera de un límite asintótico. Para $n=20$, la comparación relevante es
+Held-Karp (óptimo exacto).
 
 \subsection{Costo de $m$ y escalamiento con $n$}
 \begin{figure}[H]
@@ -608,7 +455,7 @@ solo es significativo para $n$ grande).
 \textbf{Cómo leer esta figura:} los tres puntos medidos (con barras de error
 de 3 repeticiones) caen casi exactamente sobre la recta ajustada
 ($R^2=1{,}000000$), confirmando que el costo de una iteración es lineal en
-$m$ a $n$ y $K$ fijos, tal como predice la derivación $O(mnK)$
+$m$ a $n$ y $K$ fijos, tal como predice el costo $O(mnK)$ por iteración
 (sección~\ref{sec:complejidad}). La estrella marca la extrapolación a
 $m=n=200\,000$: está fuera del rango medido, por eso se marca explícitamente
 como estimación y no como dato.
