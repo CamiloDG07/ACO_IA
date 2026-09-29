@@ -216,6 +216,22 @@ reloj dio mejor calidad en las 3 de 3 semillas probadas. El tope de 20\,000
 se sostiene entonces por la convención de la literatura y el presupuesto de
 tiempo \emph{total} del proyecto, no por una ventaja de calidad medida.
 
+La razón detrás de esto es de tiempo y paralelismo, no de memoria: en esta
+implementación cada hilo reutiliza un único buffer de estado
+(sección~\ref{sec:estrategias}), así que el pico de memoria medido no
+depende de cuántas hormigas se ejecuten por iteración, y de hecho ambas
+configuraciones midieron prácticamente el mismo pico (102,4 MB). Lo que sí
+cambia es cómo se reparte el tiempo de cómputo: con OpenMP el paralelismo
+tiene un límite práctico cercano al número de núcleos disponibles, así que
+agregar hormigas más allá de ese límite añade hilos que compiten por los
+mismos núcleos y por el mismo ancho de banda de memoria, sin acelerar el
+trabajo de forma proporcional. Invertir el mismo presupuesto de tiempo en
+más iteraciones con una colonia moderada, en cambio, aprovecha ese tiempo
+íntegro para refinar la feromona paso a paso en vez de gastarlo en
+coordinar más hormigas por vuelta, lo que es consistente con que
+$m=2\,048$ haya dado mejor calidad que $m=20\,000$ a igual tiempo de reloj
+y con memoria equivalente.
+
 \subsection{Estructuras de datos y estrategias de ahorro}
 \label{sec:estrategias}
 La razón central del enunciado (``mostrar cómo ahorrar recursos'') se resuelve
