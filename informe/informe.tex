@@ -198,17 +198,24 @@ La comparación a igual presupuesto de cómputo en $n=200\,000$ ($m=2\,048$
 contra $m=20\,000$, ~15 min de reloj por semilla, 3 semillas;
 \texttt{\seqsplit{resultados/resultado\_n200000\_punto5.csv}} y
 \texttt{\seqsplit{resultados/resultado\_n200000\_punto6.csv}}) es el dato
-central de esta subsección:
+central de esta subsección; se agrega además una tercera configuración
+deliberadamente barata ($m=2\,048$, solo 5 iteraciones, mismas 3 semillas;
+\texttt{\seqsplit{resultados/resultado\_n200000\_punto7.csv}}) para mostrar
+el otro extremo del compromiso:
 
 \begin{table}[H]\centering
-\caption{Igual presupuesto de tiempo en n=200\,000: m=20\,000 (10 iteraciones) contra m=2\,048 (\textasciitilde108 iteraciones).}
+\caption{Tres configuraciones en n=200\,000: dos a igual presupuesto de tiempo (m=20\,000, 10 iteraciones; m=2\,048, 108 iteraciones) y una configuración barata de contraste (m=2\,048, 5 iteraciones).}
 \label{tab:igual_presupuesto}
-\begin{tabular}{lrrrr}\toprule
+\footnotesize
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lrrrrrr}\toprule
 \rowcolor{gray!25}
-\textbf{Configuración} & \textbf{Iteraciones} & \textbf{$L_{mejor}$ media} & \textbf{Desv. estándar} & \textbf{Mejora vs. NN} \\\midrule
-$m=20\,000$ & 10 & 387,308 & 0,190 & 1,28\,\% \\
-$m=2\,048$ & $\approx$108 & 385,485 & 0,550 & 1,75\,\% \\
-\bottomrule\end{tabular}
+\textbf{Configuración} & \textbf{Iteraciones} & \textbf{Tiempo total (s)} & \textbf{$L_{mejor}$ media} & \textbf{Desv. estándar} & \textbf{Mejora vs. NN} & \textbf{Memoria pico (MB)} \\\midrule
+$m=20\,000$ & 10 & 838,3 & 387,308 & 0,190 & 1,28\,\% & 102,4 \\
+$m=2\,048$ & $\approx$108 & 904,8 & 385,485 & 0,550 & 1,75\,\% & 102,4 \\
+$m=2\,048$ (barata) & 5 & 44,1 & 390,486 & 0,518 & 0,47\,\% & 102,5 \\
+\bottomrule\end{tabular}%
+}
 \end{table}
 
 Se prefirió, en la práctica, $m=2\,048$ sobre $m=20\,000$: a igual tiempo de
@@ -231,6 +238,17 @@ más iteraciones con una colonia moderada, en cambio, aprovecha ese tiempo
 coordinar más hormigas por vuelta, lo que es consistente con que
 $m=2\,048$ haya dado mejor calidad que $m=20\,000$ a igual tiempo de reloj
 y con memoria equivalente.
+
+La tercera fila de la Tabla~\ref{tab:igual_presupuesto} muestra el otro
+extremo de este mismo compromiso: recortar las iteraciones a solo 5 ahorra
+tiempo de forma proporcional (44,1~s frente a los 838--905~s de las otras
+dos configuraciones), pero no memoria (el pico sigue en
+${\approx}102$~MB, por la misma razón de arriba), y la calidad cae de
+forma notoria (0,47\,\% de mejora sobre el vecino más cercano, frente a
+1,28\,\% y 1,75\,\%). Hay entonces un límite práctico a cuánto se puede
+recortar antes de que la solución deje de ser útil: el ahorro de recursos
+de este trabajo tiene sentido mientras siga habiendo suficientes
+iteraciones para que la feromona alcance a guiar la búsqueda.
 
 \subsection{Estructuras de datos y estrategias de ahorro}
 \label{sec:estrategias}
@@ -679,7 +697,13 @@ igual presupuesto de tiempo en $n=200\,000$ (sección~\ref{sec:tiempo-memoria})
 incluso sugiere lo contrario de la intuición de ``más hormigas es mejor'':
 con el mismo tiempo de reloj, más iteraciones con menos hormigas
 ($m=2\,048$) dieron mejor calidad que menos iteraciones con más hormigas
-($m=20\,000$), en las tres semillas probadas.
+($m=20\,000$), en las tres semillas probadas. Ese ahorro tiene, sin
+embargo, un límite razonable: reducir agentes e iteraciones por debajo de
+cierto punto sí ahorra tiempo de forma proporcional, pero degrada
+notablemente la calidad de la solución, así que las dos configuraciones
+``buenas'' documentadas ($m=20\,000{\times}10$ y $m=2\,048{\times}108$)
+representan puntos más equilibrados de este compromiso que uno de
+recorte extremo.
 \item Optimizar cada parámetro por separado no equivale a optimizar la
 combinación conjunta: el barrido de un factor a la vez identificó una
 mejora real (la segunda capa de feromona), pero también un espejismo
