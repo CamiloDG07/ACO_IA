@@ -248,7 +248,15 @@ tiempo de forma estricta; las corridas de este informe usan, de todas
 formas, un número de iteraciones fijo (más fácil de comparar entre
 configuraciones distintas).
 
-\paragraph{Métricas y su medición.} Longitud del mejor tour (recalculada en
+La función objetivo que ACO minimiza es la longitud total del tour,
+\begin{equation}
+L(\text{tour}) = \sum_{i=1}^{n-1} d(c_i, c_{i+1}) + d(c_n, c_1),
+\label{eq:objetivo}
+\end{equation}
+con $d(c_i,c_j)$ la distancia euclidiana entre ciudades.
+
+\paragraph{Métricas y su medición.} Longitud del mejor tour ($L_{mejor}$,
+ecuación~\eqref{eq:objetivo}; recalculada en
 doble precisión y verificada contra la reportada por el programa en cada
 corrida), tiempo de preparación y de ACO (\texttt{\seqsplit{std::chrono::steady\_clock}}),
 y pico de memoria del proceso (\texttt{\seqsplit{GetProcessMemoryInfo/PeakWorkingSetSize}}
