@@ -89,7 +89,7 @@ def fig_factorial():
         "\\begin{table}[H]\\centering\n"
         "\\caption{Recorridos posibles $(n-1)!/2$, calculado con \\texttt{lgamma}.}\n"
         "\\label{tab:factorial}\n"
-        "\\begin{tabular}{rrr}\\toprule\n"
+        "\\begin{tabular}{|r|r|r|}\\toprule\n"
         "\\rowcolor{gray!25}\n"
         "\\textbf{$n$} & \\textbf{$(n-1)!/2$} & \\textbf{$\\log_{10}$} \\\\\\midrule\n"
         f"{filas}\n\\bottomrule\\end{{tabular}}\\end{{table}}\n"
