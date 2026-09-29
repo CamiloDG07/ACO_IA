@@ -295,6 +295,27 @@ configuración sin segunda feromona) reportaba una longitud de 38,20 para
 una configuración parecida; el resultado con 8 semillas y la configuración
 ganadora es consistente en orden de magnitud y ligeramente mejor.
 
+\begin{table}[H]\centering
+\caption{Efecto de reducir m en n=2\,000 (m=200 vs. m=2\,000, mismas 50 iteraciones y semillas).}
+\label{tab:m_chico_n2000}
+\footnotesize
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lrrrrr}\toprule
+\rowcolor{gray!25}
+\textbf{Configuración} & \textbf{$L_{mejor}$ media} & \textbf{Desv. estándar} & \textbf{Mejora vs. NN} & \textbf{Tiempo ACO medio (s)} & \textbf{Memoria pico (MB)} \\\midrule
+$m=200$ & 38,007 & 0,549 & 7,34\,\% & 0,488 & 5,6 \\
+$m=2\,000$ (oficial) & 37,281 & 0,389 & 9,11\,\% & 4,451 & 5,6 \\
+\bottomrule\end{tabular}%
+}
+\end{table}
+
+A diferencia de $n=200\,000$, donde reducir agentes degradó la mejora de
+1,3--1,75\,\% a 0,47\,\%, en $n=2\,000$ la caída es mucho más suave
+(9,11\,\% a 7,34\,\%) — la instancia es lo bastante pequeña para que
+incluso 200 hormigas exploren suficiente espacio en 50 iteraciones. El
+ahorro de tiempo (9,1$\times$) se mantiene proporcional a $m$, y la
+memoria no cambia (mismo patrón de buffer por hilo).
+
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.7\textwidth]{02_convergencia_n2000.png}
@@ -550,7 +571,9 @@ cierto punto sí ahorra tiempo de forma proporcional, pero degrada
 notablemente la calidad de la solución, así que las dos configuraciones
 ``buenas'' documentadas ($m=20\,000{\times}10$ y $m=2\,048{\times}108$)
 representan puntos más equilibrados de este compromiso que uno de
-recorte extremo.
+recorte extremo. La misma prueba en $n=2\,000$ (sección~\ref{sec:resultados})
+muestra que esta degradación es proporcionalmente mayor cuanto más grande
+es la instancia.
 \item Optimizar cada parámetro por separado no equivale a optimizar la
 combinación conjunta: el barrido de un factor a la vez identificó una
 mejora real (la segunda capa de feromona), pero también un espejismo
